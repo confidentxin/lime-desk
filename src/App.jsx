@@ -1524,7 +1524,7 @@ export function App() {
 
   return (
     <main className="app-shell" aria-label="青柠工作台小红书 AI 助理">
-      <aside className="sidebar clay-panel">
+      <aside className="sidebar panel">
         <div className="brand">
           <img className="brand-mark" src="/assets/lime-desk-mark.svg" alt="" />
           <div>
@@ -1629,7 +1629,7 @@ export function App() {
 
       <section className="workspace-shell column-bottom-fade" aria-label="阶段式创作工作台">
         <div className="workspace">
-        <section className="overview clay-panel">
+        <section className="overview panel">
           <div className="overview-copy">
             <StageBadge tone="lime">新版流程</StageBadge>
             <h2>从关键词到可发布草稿</h2>
@@ -1660,7 +1660,7 @@ export function App() {
           <img className="hero-asset" src="/assets/notebook-pencil.png" alt="青柠笔记本和粉色铅笔" />
         </section>
 
-        <section className="input-panel clay-panel lime-glow">
+        <section className="input-panel panel panel-accent">
           <SectionHeader
             icon="入"
             tone="lime"
@@ -1707,7 +1707,7 @@ export function App() {
         </section>
 
         <section className="stage-grid">
-          <article className="stage-card clay-panel">
+          <article className="stage-card panel">
             <SectionHeader
               icon="搜"
               tone="yellow"
@@ -1758,7 +1758,7 @@ export function App() {
             </div>
           </article>
 
-          <article className="stage-card clay-panel">
+          <article className="stage-card panel">
             <SectionHeader
               icon="库"
               tone="lime"
@@ -1785,7 +1785,7 @@ export function App() {
           </article>
         </section>
 
-        <section className="stage-card clay-panel wide-card">
+        <section className="stage-card panel wide-card">
           <SectionHeader
             icon="题"
             tone="blue"
@@ -1828,7 +1828,7 @@ export function App() {
         </section>
 
         <section className="copy-grid">
-          <article className="stage-card clay-panel">
+          <article className="stage-card panel">
             <SectionHeader
               icon="写"
               tone="lavender"
@@ -1876,7 +1876,7 @@ export function App() {
             </div>
           </article>
 
-          <article className="preview clay-panel">
+          <article className="preview panel">
             <SectionHeader
               icon="预"
               tone="pink"
@@ -1940,7 +1940,7 @@ export function App() {
         </section>
 
         <section className="cover-grid">
-          <article className="stage-card clay-panel">
+          <article className="stage-card panel">
             <SectionHeader
               icon="图"
               tone="rose"
@@ -2037,7 +2037,7 @@ export function App() {
             )}
           </article>
 
-          <article className="cover-result clay-panel">
+          <article className="cover-result panel">
             <SectionHeader
               icon="成"
               tone="lime"
@@ -2110,7 +2110,7 @@ export function App() {
 
       <aside className="config-shell column-bottom-fade" aria-label="右侧配置栏">
         <div className="config-rail">
-          <section className="model-card clay-panel">
+          <section className="model-card panel">
             <h2>模型配置</h2>
             <p>文案生成与图片生成分开配置，字段会自动缓存。</p>
             <div className="model-route-list">
@@ -2139,7 +2139,7 @@ export function App() {
             </div>
           </section>
 
-        <section className={`notice-card clay-panel ${notice.type}`}>
+        <section className={`notice-card panel ${notice.type}`}>
           <header>
             <h2>状态与错误提示</h2>
             <StageBadge tone={notice.type === "error" ? "rose" : "lime"}>
@@ -2165,7 +2165,7 @@ export function App() {
           </div>
         </section>
 
-        <section className="error-lab clay-panel">
+        <section className="error-lab panel">
           <h2>错误覆盖</h2>
           <div>
             {Object.entries({
