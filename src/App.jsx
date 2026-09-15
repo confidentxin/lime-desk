@@ -1560,7 +1560,7 @@ export function App() {
               <SoftIcon tone={["pink", "yellow", "lime", "blue", "lavender", "rose"][index]}>
                 {index + 1}
               </SoftIcon>
-              <span>
+              <span className="row-text">
                 <strong>{step.label}</strong>
                 <small>{step.meta}</small>
               </span>
@@ -1593,9 +1593,14 @@ export function App() {
           ) : (
             projects.map((project) => (
               <div key={project.id} className={project.id === activeProjectId ? "project-row active" : "project-row"}>
-                <button className="project" type="button" onClick={() => loadProject(project)}>
+                <button
+                  className="project"
+                  type="button"
+                  title={`${project.title}\n${projectMeta(project)}`}
+                  onClick={() => loadProject(project)}
+                >
                   <SoftIcon tone={project.id === activeProjectId ? "lime" : "pink"}>稿</SoftIcon>
-                  <span>
+                  <span className="row-text">
                     <strong>{project.title}</strong>
                     <small>{projectMeta(project)}</small>
                   </span>

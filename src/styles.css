@@ -424,13 +424,20 @@ select {
   color: var(--accent-ink);
 }
 
+/* 行内文字容器：必须可收缩，否则长标题会顶出卡片并压到右侧按钮上 */
+.row-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .flow-nav strong,
 .flow-nav small,
 .project strong,
 .project small {
   display: block;
   overflow: hidden;
-  max-width: 150px;
+  max-width: 100%;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -526,6 +533,7 @@ select {
 }
 
 .settings-button span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1263,9 +1271,10 @@ select {
 
 .image-set-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px 10px;
   margin-top: 12px;
 }
 
@@ -1546,6 +1555,7 @@ select {
 .post-card p {
   display: block;
   margin-top: 7px;
+  overflow-wrap: anywhere;
   color: var(--ink-mute);
   font-size: 11px;
   line-height: 1.55;
@@ -1807,6 +1817,7 @@ select {
 .manual-boundary strong {
   flex: 1 1 100%;
   min-height: 24px;
+  overflow-wrap: anywhere;
   margin-top: 2px;
   color: var(--ink-faint);
   font-size: 10px;
