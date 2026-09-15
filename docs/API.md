@@ -1,4 +1,4 @@
-# Mint Atelier API 契约（前后端分离）
+# Lime Desk API 契约（前后端分离）
 
 > 本文件是前端（`.planning/2026-09-11-xhs-frontend/`）与后端（`.planning/2026-09-11-xhs-backend/`）两个并行对话的**唯一接口事实源**。
 > 修改契约的对话必须同步更新本文件，并在自己的 progress.md 记录变更，通知对方。
@@ -192,7 +192,7 @@ items 结构随 kind：
 
 ## 3. 前端调用约定（对话 B 遵守）
 
-- `src/codexClient.js` 统一 `API_BASE`（localStorage `mint-atelier-v2:apiBase` 可覆盖，默认 `http://127.0.0.1:52881`），所有路径拼 `${API_BASE}/api/...` 与 `${API_BASE}/generated/covers/...`
+- `src/codexClient.js` 统一 `API_BASE`（localStorage `lime-desk-v1:apiBase` 可覆盖，默认 `http://127.0.0.1:52881`），所有路径拼 `${API_BASE}/api/...` 与 `${API_BASE}/generated/covers/...`
 - fetch 网络层失败（TypeError）时抛出「后端未启动（127.0.0.1:52881）」可理解提示
 - 图片 `<img src>` 使用绝对地址（分离后相对路径不再指向后端）
 - 契约外字段容错：忽略响应里的附加字段（如 export 的 `slug`、project 的 `images`）；空工作区的 `activeProjectId: ""` 前端按「无激活项目」处理
@@ -206,3 +206,4 @@ items 结构随 kind：
 | 2026-09-11 | 初版：固化现有 9 端点 + 新增 imageSetPlan / store / export | 规划会话 |
 | 2026-09-14 | B1+B2 落地：后端独立进程 `server/index.mjs` 监听 52881（可用 `MINT_BACKEND_PORT` 覆盖）；请求体上限 2 MB 生效；`/api/store` 实现细节补充（可选 `images` 字段、缺 id/title 时服务端生成、删除激活项目后 `activeProjectId` 置空、`imageSet` 规范化） | 后端对话 |
 | 2026-09-14 | 前端 F1~F4 落地后补充 §3 前端侧约定（附加字段容错、`""` 归一化、styleGuide 拼接位置、tags 解析），接口语义未变更 | 前端对话 |
+| 2026-09-14 | 品牌改名「薄荷工坊/Mint Atelier → 青柠工作台/Lime Desk」：接口路径、请求/响应字段均未变；前端 localStorage 前缀 `mint-atelier-v2` → `lime-desk-v1`（§3 已更新，`src/storageKeys.js` 提供一次性迁移）。**待后端确认**：`server/index.mjs` 的 `MINT_BACKEND_PORT` 环境变量名是否一并改名（属后端接口，前端未擅自改动） | 前端对话 |

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="青柠小怪">
+  <title>青柠小怪 · Lime Desk</title>
+  <defs>
+    <radialGradient id="ld-rind" cx="34%" cy="26%" r="88%">
+      <stop offset="0%" stop-color="#dcf8b4" />
+      <stop offset="52%" stop-color="#a8e063" />
+      <stop offset="100%" stop-color="#71bd3a" />
+    </radialGradient>
+    <linearGradient id="ld-gloss" x1="0" y1="0" x2="0.45" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.78" />
+      <stop offset="62%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- 果体 -->
+  <circle cx="64" cy="64" r="60" fill="url(#ld-rind)" />
+
+  <!-- 切瓣分隔线（几何化，无细节插画） -->
+  <g stroke="#ffffff" stroke-opacity="0.5" stroke-width="3.6" stroke-linecap="round">
+    <line x1="64" y1="64" x2="64" y2="20" />
+    <line x1="64" y1="64" x2="64" y2="108" />
+    <line x1="64" y1="64" x2="20" y2="64" />
+    <line x1="64" y1="64" x2="108" y2="64" />
+    <line x1="64" y1="64" x2="92" y2="92" />
+    <line x1="64" y1="64" x2="36" y2="92" />
+    <line x1="64" y1="64" x2="92" y2="36" />
+    <line x1="64" y1="64" x2="36" y2="36" />
+  </g>
+
+  <!-- 果肉内圈 -->
+  <circle cx="64" cy="64" r="34" fill="none" stroke="#ffffff" stroke-opacity="0.42" stroke-width="2.4" />
+
+  <!-- 极简表情 -->
+  <g fill="#3f4a2a">
+    <circle cx="51" cy="61" r="5.4" />
+    <circle cx="77" cy="61" r="5.4" />
+  </g>
+  <path d="M53 79 Q64 88 75 79" fill="none" stroke="#3f4a2a" stroke-width="4.6" stroke-linecap="round" />
+
+  <!-- 高光与描边 -->
+  <ellipse cx="45" cy="37" rx="21" ry="13" fill="url(#ld-gloss)" />
+  <circle cx="64" cy="64" r="58.6" fill="none" stroke="#4f8a24" stroke-opacity="0.22" stroke-width="2.4" />
+</svg>

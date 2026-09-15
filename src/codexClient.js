@@ -1,5 +1,6 @@
+import { API_BASE_STORAGE_KEY } from "./storageKeys.js";
+
 const DEFAULT_API_BASE = "http://127.0.0.1:52881";
-const API_BASE_STORAGE_KEY = "mint-atelier-v2:apiBase";
 
 export function getApiBase() {
   try {

@@ -9,3 +9,6 @@ test-results/
 *.log
 
 data/
+
+# UI 风格参考图的整页大图（13MB+），只保留缩略图与样式源码
+.planning/*/preview/ui-*.png

@@ -2,7 +2,7 @@
 
 ## 1. 产品目标
 
-`薄荷工坊 / Mint Atelier` 是一个桌面端 Web App，用于帮助用户生成优质小红书内容。用户输入账号人设、创作关键词和撰写思路后，可以参考热门内容，逐步生成小红书选题、小红书文案、整套配图方案和整套配图（1 张封面 + 3~7 张内页），也可以点击“自动化生成”串行完成核心创作流程，并把完成的笔记连同图片导出到本机。
+`青柠工作台 / Lime Desk` 是一个桌面端 Web App，用于帮助用户生成优质小红书内容。用户输入账号人设、创作关键词和撰写思路后，可以参考热门内容，逐步生成小红书选题、小红书文案、整套配图方案和整套配图（1 张封面 + 3~7 张内页），也可以点击“自动化生成”串行完成核心创作流程，并把完成的笔记连同图片导出到本机。
 
 产品核心目标是让用户通过简单流程完成从「关键词」到「可发布内容草稿」的创作过程。本产品只做内容创作辅助，不做自动发布、自动点赞、自动评论、自动收藏、自动关注等平台操作。
 
@@ -112,7 +112,7 @@
 - Claude Code：通过 `claude --print <prompt> --output-format json` 生成文本和模型决策，可选 `--model <alias>`；调用时启用 safe mode、关闭工具和会话持久化，解析响应的 `result` 字段。默认从 PATH 查找，可用 `CLAUDE_CLI_PATH` 覆盖。Claude Code 当前不声明图片生成能力，因此不会出现在本地图片 CLI 选项中。
 - 自定义规范 CLI：用户可填写 PATH 中的命令名或可执行文件绝对路径。服务端使用 `shell: false` 和独立参数数组启动，不允许 shell 命令片段。
 
-Mint Atelier print protocol 规定：CLI 必须支持 `--version`；文本调用必须支持可选的 `--model <alias>`、必填的 `--prompt <prompt>` 和 `--output-format stream-json`；stdout 采用逐行 JSON，每次最终回复至少包含一条 `{"role":"assistant","content":"<valid JSON>"}`，其中 `content` 是满足当前任务结构的 JSON 字符串。stderr 可输出思考或进度，但不得承载最终结果。新增本地 CLI 也可以通过实现 `server/localCli/registry.mjs` 的适配器接口接入其他调用规范。
+Lime Desk print protocol 规定：CLI 必须支持 `--version`；文本调用必须支持可选的 `--model <alias>`、必填的 `--prompt <prompt>` 和 `--output-format stream-json`；stdout 采用逐行 JSON，每次最终回复至少包含一条 `{"role":"assistant","content":"<valid JSON>"}`，其中 `content` 是满足当前任务结构的 JSON 字符串。stderr 可输出思考或进度，但不得承载最终结果。新增本地 CLI 也可以通过实现 `server/localCli/registry.mjs` 的适配器接口接入其他调用规范。
 
 本地 CLI 返回文案和封面 Prompt 时，服务端兼容约定字段的常见英文、snake_case 与中文别名。文案的 `coverDirection` 完全缺失时，服务端根据文案标题补充静物封面方向；其他必需内容、数量和话题标签仍保持强校验。本地 CLI 的结构化输出错误统一使用 `LOCAL_CLI_BAD_JSON`。
 

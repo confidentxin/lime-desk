@@ -84,7 +84,7 @@ async function waitForHttpReady(targetUrl, timeoutMs) {
 
 installDependenciesIfNeeded();
 
-console.log("Starting Mint Atelier");
+console.log("Starting Lime Desk");
 console.log(`Project: ${projectDir}`);
 console.log(`Backend: ${backendUrl}`);
 console.log(`Fixed URL: ${url}`);
@@ -151,6 +151,6 @@ server.on("exit", (code, signal) => {
 backend.on("exit", (code, signal) => {
   if (opened && signal === null) {
     console.log("");
-    console.log(`Backend stopped unexpectedly (exit code ${code}). Restart 启动薄荷工坊 to recover.`);
+    console.log(`Backend stopped unexpectedly (exit code ${code}). Restart 启动青柠工作台 to recover.`);
   }
 });

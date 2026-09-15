@@ -10,7 +10,7 @@
 
 ## 当前状态
 
-- 项目：`薄荷工坊 / Mint Atelier`
+- 项目：`青柠工作台 / Lime Desk`
 - 类型：React + Vite 桌面端小红书 AI 助理
 - 主要界面：3 列独立滚动的阶段式小红书内容创作工作台
 - 视觉方向：Pastel 3D Claymorphism Dashboard
@@ -146,7 +146,7 @@
 
 已验证：
 
-- HTML 入口标题为 `薄荷工坊 / Mint Atelier`，不再保留 `Prototype` 标题。
+- HTML 入口标题为 `青柠工作台 / Lime Desk`，不再保留 `Prototype` 标题。
 - 生产构建可以完成。
 - 本地 API smoke test 成功：`/api/codex/generate` 通过 Codex CLI 返回 10 个结构化选题，耗时约 44s。
 - 本地封面图 API smoke test 成功：`/api/codex/cover-image` 通过 Codex CLI imagegen worker 返回 `/generated/covers/*.png`，PNG 托管响应 200，PNG signature 正确，文件大小约 2.27MB，耗时约 99s。

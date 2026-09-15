@@ -69,7 +69,7 @@ curl -sS http://127.0.0.1:52880/api/codex/decide \
 ```bash
 curl -sS http://127.0.0.1:52880/api/codex/cover-image \
   -H 'Content-Type: application/json' \
-  --data '{"persona":"轻熟风穿搭博主","keyword":"夏日通勤穿搭","selectedDraft":{"title":"35 度通勤也清爽","body":"薄针织和棉麻半裙组合，适合通勤收藏。#夏日通勤[话题]#"},"selectedPrompt":{"title":"薄荷通勤静物","prompt":"4:5 小红书封面，薄荷绿通勤穿搭静物，棉麻半裙、浅色包、色卡和花材，柔和自然光，明确排除真人、脸、手和动物。"},"modelName":"Codex CLI"}'
+  --data '{"persona":"轻熟风穿搭博主","keyword":"夏日通勤穿搭","selectedDraft":{"title":"35 度通勤也清爽","body":"薄针织和棉麻半裙组合，适合通勤收藏。#夏日通勤[话题]#"},"selectedPrompt":{"title":"青柠通勤静物","prompt":"4:5 小红书封面，青柠绿通勤穿搭静物，棉麻半裙、浅色包、色卡和花材，柔和自然光，明确排除真人、脸、手和动物。"},"modelName":"Codex CLI"}'
 ```
 
 封面图 smoke test 需要确认响应里的 `image.src` 是 `/generated/covers/*.png`，并继续请求该 URL 验证 HTTP 200、`Content-Type: image/png`、PNG signature 正确且文件大小非 0。
@@ -95,7 +95,7 @@ curl -sS http://127.0.0.1:52880/api/cloud/decide \
 ```bash
 curl -sS http://127.0.0.1:52880/api/cloud/cover-image \
   -H 'Content-Type: application/json' \
-  --data '{"persona":"轻熟风穿搭博主","keyword":"夏日通勤穿搭","selectedDraft":{"title":"35 度通勤也清爽","body":"薄针织和棉麻半裙组合，适合通勤收藏。#夏日通勤[话题]#"},"selectedPrompt":{"title":"薄荷通勤静物","prompt":"4:5 小红书封面，薄荷绿通勤穿搭静物，棉麻半裙、浅色包、色卡和花材，柔和自然光，明确排除真人、脸、手和动物。"},"modelName":"image-compatible","apiKey":"test-key","baseUrl":"http://127.0.0.1:5999/v1"}'
+  --data '{"persona":"轻熟风穿搭博主","keyword":"夏日通勤穿搭","selectedDraft":{"title":"35 度通勤也清爽","body":"薄针织和棉麻半裙组合，适合通勤收藏。#夏日通勤[话题]#"},"selectedPrompt":{"title":"青柠通勤静物","prompt":"4:5 小红书封面，青柠绿通勤穿搭静物，棉麻半裙、浅色包、色卡和花材，柔和自然光，明确排除真人、脸、手和动物。"},"modelName":"image-compatible","apiKey":"test-key","baseUrl":"http://127.0.0.1:5999/v1"}'
 ```
 
 ## Playwright 截图

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { STORAGE_PREFIX } from "./storageKeys.js";
 import {
   requestCloudCoverImage,
   requestCloudDecision,
@@ -13,8 +14,6 @@ import {
   requestXhsSearch,
   resolveAssetUrl,
 } from "./codexClient.js";
-
-const STORAGE_PREFIX = "mint-atelier-v2";
 
 const defaultPersona = "26 岁轻熟风穿搭博主，分享通勤、周末出行和约会搭配。表达温柔具体，重点放在真实穿着体验、单品组合和可复用公式。";
 const defaultKeyword = "夏日通勤穿搭";
@@ -143,15 +142,15 @@ function isCloudPlaceholderModel(value) {
   return /codex\s*cli|imagegen\s*skill|本地\s*cli/i.test(String(value ?? ""));
 }
 
-function SoftIcon({ children, tone = "mint" }) {
+function SoftIcon({ children, tone = "lime" }) {
   return <span className={`soft-icon ${tone}`}>{children}</span>;
 }
 
-function StageBadge({ children, tone = "mint" }) {
+function StageBadge({ children, tone = "lime" }) {
   return <span className={`stage-badge ${tone}`}>{children}</span>;
 }
 
-function SectionHeader({ icon, tone = "mint", title, meta, action }) {
+function SectionHeader({ icon, tone = "lime", title, meta, action }) {
   return (
     <header className="section-header">
       <div>
@@ -1524,20 +1523,20 @@ export function App() {
   };
 
   return (
-    <main className="app-shell" aria-label="薄荷工坊新版小红书 AI 助理">
+    <main className="app-shell" aria-label="青柠工作台小红书 AI 助理">
       <aside className="sidebar clay-panel">
         <div className="brand">
-          <SoftIcon tone="mint">叶</SoftIcon>
+          <img className="brand-mark" src="/assets/lime-desk-mark.svg" alt="" />
           <div>
-            <h1>薄荷工坊</h1>
-            <p>Mint Atelier</p>
+            <h1>青柠工作台</h1>
+            <p>Lime Desk</p>
           </div>
         </div>
 
         <section className="profile-card">
-          <img src="/assets/avatar-creator.png" alt="薄荷小丸子头像" />
+          <img src="/assets/lime-desk-mark.svg" alt="青柠小怪头像" />
           <div>
-            <h2>薄荷小丸子</h2>
+            <h2>青柠小怪</h2>
             <span>内容创作助理</span>
             <p><i /> 本地草稿</p>
           </div>
@@ -1558,7 +1557,7 @@ export function App() {
               onClick={() => setActiveStep(step.id)}
               type="button"
             >
-              <SoftIcon tone={["pink", "yellow", "mint", "blue", "lavender", "rose"][index]}>
+              <SoftIcon tone={["pink", "yellow", "lime", "blue", "lavender", "rose"][index]}>
                 {index + 1}
               </SoftIcon>
               <span>
@@ -1595,7 +1594,7 @@ export function App() {
             projects.map((project) => (
               <div key={project.id} className={project.id === activeProjectId ? "project-row active" : "project-row"}>
                 <button className="project" type="button" onClick={() => loadProject(project)}>
-                  <SoftIcon tone={project.id === activeProjectId ? "mint" : "pink"}>稿</SoftIcon>
+                  <SoftIcon tone={project.id === activeProjectId ? "lime" : "pink"}>稿</SoftIcon>
                   <span>
                     <strong>{project.title}</strong>
                     <small>{projectMeta(project)}</small>
@@ -1632,7 +1631,7 @@ export function App() {
         <div className="workspace">
         <section className="overview clay-panel">
           <div className="overview-copy">
-            <StageBadge tone="mint">新版流程</StageBadge>
+            <StageBadge tone="lime">新版流程</StageBadge>
             <h2>从关键词到可发布草稿</h2>
             <p>人设、热门参考、选题、文案、配图方案和整套配图支持手动逐步推进，也可以一次点击自动化生成。</p>
             <div className="metric-grid">
@@ -1658,13 +1657,13 @@ export function App() {
               </div>
             </div>
           </div>
-          <img className="hero-asset" src="/assets/notebook-pencil.png" alt="薄荷笔记本和粉色铅笔" />
+          <img className="hero-asset" src="/assets/notebook-pencil.png" alt="青柠笔记本和粉色铅笔" />
         </section>
 
-        <section className="input-panel clay-panel mint-glow">
+        <section className="input-panel clay-panel lime-glow">
           <SectionHeader
             icon="入"
-            tone="mint"
+            tone="lime"
             title="账号人设与创作关键词"
             meta="人设最多 1000 字，关键词用于搜索和生成"
             action={
@@ -1762,15 +1761,15 @@ export function App() {
           <article className="stage-card clay-panel">
             <SectionHeader
               icon="库"
-              tone="mint"
+              tone="lime"
               title="本地 RAG 知识库"
               meta="只保存用户勾选并确认的参考内容"
-              action={<button className="soft-button mint" disabled={isBusy} type="button" onClick={addToRag}>加入 RAG</button>}
+              action={<button className="soft-button lime" disabled={isBusy} type="button" onClick={addToRag}>加入 RAG</button>}
             />
             <div className="rag-stack">
               {ragItems.length === 0 ? (
                 <div className="empty-state">
-                  <SoftIcon tone="mint">选</SoftIcon>
+                  <SoftIcon tone="lime">选</SoftIcon>
                   <p>勾选搜索结果后，点击加入本地 RAG。</p>
                 </div>
               ) : (
@@ -1890,8 +1889,8 @@ export function App() {
             />
             <div className="post-card">
               <div className="post-author">
-                <img src="/assets/avatar-creator.png" alt="" />
-                <strong>薄荷小丸子</strong>
+                <img src="/assets/lime-desk-mark.svg" alt="" />
+                <strong>青柠小怪</strong>
                 <button type="button">关注</button>
               </div>
               <div className="post-cover-wrap">
@@ -2003,7 +2002,7 @@ export function App() {
                           onChange={(event) => updateImageSetItem(item.id, "title", event.target.value)}
                         />
                         <button
-                          className="soft-button mint"
+                          className="soft-button lime"
                           disabled={isBusy}
                           type="button"
                           onClick={() => generateImageSetItem(item.id)}
@@ -2041,7 +2040,7 @@ export function App() {
           <article className="cover-result clay-panel">
             <SectionHeader
               icon="成"
-              tone="mint"
+              tone="lime"
               title="成品画廊"
               meta={
                 generatingKind === "imageSet" || generatingKind === "imageSetItem"
@@ -2052,7 +2051,7 @@ export function App() {
               }
               action={
                 <button
-                  className="soft-button mint"
+                  className="soft-button lime"
                   disabled={isBusy || !selectedDraft}
                   type="button"
                   onClick={exportNote}
@@ -2064,7 +2063,7 @@ export function App() {
             <div className="gallery-grid">
               {imageSetTotal === 0 ? (
                 <div className="empty-state">
-                  <SoftIcon tone="mint">图</SoftIcon>
+                  <SoftIcon tone="lime">图</SoftIcon>
                   <p>整套配图会以 4:5 画廊展示在这里。</p>
                 </div>
               ) : (
@@ -2087,7 +2086,7 @@ export function App() {
                       key={item.id}
                       className={activeImageId === item.id ? "gallery-thumb pending active" : "gallery-thumb pending"}
                     >
-                      <SoftIcon tone="mint">{activeImageId === item.id ? "…" : "待"}</SoftIcon>
+                      <SoftIcon tone="lime">{activeImageId === item.id ? "…" : "待"}</SoftIcon>
                       <span>{item.title}</span>
                     </div>
                   ),
@@ -2119,7 +2118,7 @@ export function App() {
                 channel="text"
                 title="文案生成"
                 icon="文"
-                tone="mint"
+                tone="lime"
                 value={channelConfig("text")}
                 onChange={(value) => updateModelConfig("text", value)}
                 localClis={localClis}
@@ -2143,7 +2142,7 @@ export function App() {
         <section className={`notice-card clay-panel ${notice.type}`}>
           <header>
             <h2>状态与错误提示</h2>
-            <StageBadge tone={notice.type === "error" ? "rose" : "mint"}>
+            <StageBadge tone={notice.type === "error" ? "rose" : "lime"}>
               {notice.type === "error" ? "需处理" : "正常"}
             </StageBadge>
           </header>

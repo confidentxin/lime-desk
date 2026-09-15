@@ -38,7 +38,7 @@ function formatRagItems(ragItems = []) {
 
 function baseContext(payload) {
   return [
-    "You are generating Chinese Xiaohongshu content for Mint Atelier, a local desktop content workbench.",
+    "You are generating Chinese Xiaohongshu content for Lime Desk, a local desktop content workbench.",
     ...JSON_ONLY_RULES,
     "",
     `Persona: ${compactText(payload.persona, 1000)}`,
@@ -170,7 +170,7 @@ export function buildDecisionPrompt(payload) {
   };
 
   return [
-    "You are making a structured decision for Mint Atelier's Xiaohongshu content workflow.",
+    "You are making a structured decision for Lime Desk's Xiaohongshu content workflow.",
     ...JSON_ONLY_RULES,
     "",
     `Decision kind: ${compactText(decisionKind, 80)}`,

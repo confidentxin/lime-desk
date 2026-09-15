@@ -53,7 +53,7 @@ const server = createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Mint Atelier backend listening at http://${HOST}:${PORT}`);
+  console.log(`Lime Desk backend listening at http://${HOST}:${PORT}`);
   console.log(`CORS origin: ${ALLOWED_ORIGIN}`);
   console.log("Press Ctrl+C to stop the backend server.");
 });

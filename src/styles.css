@@ -61,10 +61,10 @@ button {
     inset 0 -8px 16px rgba(205, 169, 206, 0.09);
 }
 
-.mint-glow {
+.lime-glow {
   background:
-    radial-gradient(circle at 7% 0%, rgba(164, 238, 220, 0.35), transparent 30%),
-    linear-gradient(145deg, rgba(250, 255, 252, 0.88), rgba(246, 241, 255, 0.74));
+    radial-gradient(circle at 7% 0%, rgba(207, 238, 164, 0.35), transparent 30%),
+    linear-gradient(145deg, rgba(253, 255, 250, 0.88), rgba(246, 241, 255, 0.74));
 }
 
 .soft-icon {
@@ -85,7 +85,7 @@ button {
     inset 0 -7px 12px rgba(99, 73, 140, 0.12);
 }
 
-.soft-icon.mint { background: linear-gradient(145deg, #a9eedf, #72d9c7); color: #248974; }
+.soft-icon.lime { background: linear-gradient(145deg, #d1eea9, #aed972); color: #5f8924; }
 .soft-icon.pink { background: linear-gradient(145deg, #ffc1db, #ee8fca); color: #b43f91; }
 .soft-icon.yellow { background: linear-gradient(145deg, #ffe8a8, #ffd36f); color: #a87811; }
 .soft-icon.blue { background: linear-gradient(145deg, #bde0ff, #8bbcf8); color: #376ca9; }
@@ -106,9 +106,9 @@ button {
     4px 5px 12px rgba(125, 92, 152, 0.12);
 }
 
-.stage-badge.mint {
-  color: #248974;
-  background: #d8fbf0;
+.stage-badge.lime {
+  color: #5f8924;
+  background: #ecfbd8;
 }
 
 .stage-badge.rose {
@@ -159,7 +159,7 @@ button {
 .draft-list::-webkit-scrollbar-thumb {
   border: 2px solid rgba(255, 255, 255, 0.36);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(196, 150, 232, 0.42), rgba(120, 210, 194, 0.42));
+  background: linear-gradient(180deg, rgba(196, 150, 232, 0.42), rgba(172, 210, 120, 0.42));
 }
 
 .workspace-shell,
@@ -207,6 +207,17 @@ button {
 .brand {
   gap: 12px;
   padding: 4px 8px;
+}
+
+.brand-mark {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    5px 6px 14px rgba(116, 89, 139, 0.18),
+    inset 0 2px 6px rgba(255, 255, 255, 0.86);
 }
 
 .brand h1,
@@ -313,8 +324,8 @@ button {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #48d791;
-  box-shadow: 0 0 0 3px rgba(72, 215, 145, 0.16);
+  background: #9bd748;
+  box-shadow: 0 0 0 3px rgba(155, 215, 72, 0.16);
 }
 
 .flow-nav,
@@ -340,7 +351,7 @@ button {
 }
 
 .flow-nav header strong {
-  color: #2a8f7d;
+  color: #658f2a;
   font-size: 13px;
 }
 
@@ -358,7 +369,7 @@ button {
   width: var(--progress);
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #72d9c7, #d17bff);
+  background: linear-gradient(90deg, #aed972, #d17bff);
   transition: width 0.24s ease;
 }
 
@@ -434,9 +445,9 @@ button {
 }
 
 .project-row.active .project {
-  background: linear-gradient(145deg, #bdf2e6, #94ead9);
+  background: linear-gradient(145deg, #dcf2bd, #c6ea94);
   box-shadow:
-    5px 7px 16px rgba(80, 157, 145, 0.2),
+    5px 7px 16px rgba(125, 157, 80, 0.2),
     inset 0 2px 5px rgba(255, 255, 255, 0.75);
 }
 
@@ -533,7 +544,7 @@ button {
 }
 
 .overview .stage-badge,
-.overview .stage-badge.mint {
+.overview .stage-badge.lime {
   min-height: auto;
   padding: 0;
   background: transparent;
@@ -695,9 +706,9 @@ button {
   white-space: nowrap;
 }
 
-.soft-button.mint {
-  color: #267c71;
-  background: linear-gradient(145deg, #bdf1e8, #eafffb);
+.soft-button.lime {
+  color: #587c26;
+  background: linear-gradient(145deg, #dbf1bd, #f6ffea);
 }
 
 .soft-button.yellow {
@@ -708,7 +719,7 @@ button {
 .automation-button {
   min-width: 112px;
   color: #fff;
-  background: linear-gradient(180deg, #7fdcca, #9b7cf2);
+  background: linear-gradient(180deg, #b5dc7f, #9b7cf2);
 }
 
 .input-grid {
@@ -838,15 +849,15 @@ button {
 }
 
 .search-result.selected {
-  border-color: rgba(96, 204, 184, 0.68);
-  background: linear-gradient(145deg, rgba(228, 255, 249, 0.86), rgba(255, 249, 254, 0.78));
+  border-color: rgba(159, 204, 96, 0.68);
+  background: linear-gradient(145deg, rgba(244, 255, 228, 0.86), rgba(255, 249, 254, 0.78));
 }
 
 .search-result input {
   width: 18px;
   height: 18px;
   margin-top: 2px;
-  accent-color: #54c7b5;
+  accent-color: #97c754;
 }
 
 .search-result strong {
@@ -934,7 +945,7 @@ button {
 .rag-item small {
   display: block;
   margin-top: 8px;
-  color: #2a8f7d;
+  color: #658f2a;
   font-size: 11px;
   font-weight: 900;
 }
@@ -963,12 +974,12 @@ button {
 
 .topic-card.selected,
 .draft-card.selected {
-  border-color: rgba(96, 204, 184, 0.72);
+  border-color: rgba(159, 204, 96, 0.72);
   background:
-    radial-gradient(circle at 20% 0%, rgba(178, 242, 229, 0.42), transparent 42%),
+    radial-gradient(circle at 20% 0%, rgba(215, 242, 178, 0.42), transparent 42%),
     rgba(255, 255, 255, 0.78);
   box-shadow:
-    7px 9px 18px rgba(82, 157, 145, 0.17),
+    7px 9px 18px rgba(126, 157, 82, 0.17),
     inset 0 2px 7px rgba(255, 255, 255, 0.88);
 }
 
@@ -1295,7 +1306,7 @@ button {
 
 .model-config-block p {
   margin-top: 4px;
-  color: #2a8f7d;
+  color: #658f2a;
   font-size: 10px;
   font-weight: 900;
 }
@@ -1319,10 +1330,10 @@ button {
 }
 
 .provider-switch button.selected {
-  color: #267c71;
-  background: linear-gradient(145deg, #bdf1e8, #eafffb);
+  color: #587c26;
+  background: linear-gradient(145deg, #dbf1bd, #f6ffea);
   box-shadow:
-    3px 4px 9px rgba(82, 157, 145, 0.12),
+    3px 4px 9px rgba(126, 157, 82, 0.12),
     inset 0 2px 5px rgba(255, 255, 255, 0.82);
 }
 
@@ -1367,11 +1378,11 @@ button {
   min-height: 30px;
   padding: 0 11px;
   border-radius: 13px;
-  color: #2c766d;
-  background: linear-gradient(145deg, #c8f3eb, #f0fffb);
+  color: #57762c;
+  background: linear-gradient(145deg, #e1f3c8, #f9fff0);
   font-size: 10px;
   box-shadow:
-    3px 4px 9px rgba(82, 157, 145, 0.12),
+    3px 4px 9px rgba(126, 157, 82, 0.12),
     inset 0 2px 5px rgba(255, 255, 255, 0.82);
 }
 
@@ -1385,7 +1396,7 @@ button {
 }
 
 .cli-detection-row span.ready {
-  color: #268275;
+  color: #5c8226;
 }
 
 .cli-detection-row span.missing {
@@ -1421,8 +1432,8 @@ button {
 }
 
 .notice-card.success > p {
-  color: #267c71;
-  background: #e1fbf3;
+  color: #587c26;
+  background: #f0fbe1;
 }
 
 .cli-status {
@@ -1440,7 +1451,7 @@ button {
 }
 
 .cli-status.success {
-  background: #e1fbf3;
+  background: #f0fbe1;
 }
 
 .cli-status.error {
@@ -1510,8 +1521,8 @@ button {
 }
 
 .manual-boundary strong {
-  color: #267c71;
-  background: #d8fbf0;
+  color: #587c26;
+  background: #ecfbd8;
 }
 
 .error-lab div {
@@ -1605,9 +1616,9 @@ button {
 }
 
 .image-item-card.active {
-  border-color: rgba(96, 204, 184, 0.72);
+  border-color: rgba(159, 204, 96, 0.72);
   background:
-    radial-gradient(circle at 20% 0%, rgba(178, 242, 229, 0.42), transparent 42%),
+    radial-gradient(circle at 20% 0%, rgba(215, 242, 178, 0.42), transparent 42%),
     rgba(255, 255, 255, 0.78);
 }
 
@@ -1633,7 +1644,7 @@ button {
 
 .image-item-title:focus,
 .image-item-prompt:focus {
-  border-color: rgba(96, 204, 184, 0.72);
+  border-color: rgba(159, 204, 96, 0.72);
 }
 
 .image-item-card header .soft-button {
@@ -1733,9 +1744,9 @@ button {
 }
 
 .gallery-thumb.pending.active {
-  border-color: rgba(96, 204, 184, 0.72);
+  border-color: rgba(159, 204, 96, 0.72);
   background:
-    radial-gradient(circle at 20% 0%, rgba(178, 242, 229, 0.42), transparent 42%),
+    radial-gradient(circle at 20% 0%, rgba(215, 242, 178, 0.42), transparent 42%),
     rgba(255, 255, 255, 0.78);
 }
 
@@ -1862,32 +1873,32 @@ button {
 }
 
 .post-thumb.active {
-  border-color: rgba(96, 204, 184, 0.9);
+  border-color: rgba(159, 204, 96, 0.9);
   box-shadow:
-    0 0 0 2px rgba(178, 242, 229, 0.72),
-    4px 5px 12px rgba(82, 157, 145, 0.22);
+    0 0 0 2px rgba(215, 242, 178, 0.72),
+    4px 5px 12px rgba(126, 157, 82, 0.22);
 }
 
 .gallery-thumb.current {
-  border-color: rgba(96, 204, 184, 0.9);
+  border-color: rgba(159, 204, 96, 0.9);
   box-shadow:
-    0 0 0 2px rgba(178, 242, 229, 0.7),
-    5px 7px 15px rgba(82, 157, 145, 0.2);
+    0 0 0 2px rgba(215, 242, 178, 0.7),
+    5px 7px 15px rgba(126, 157, 82, 0.2);
 }
 
 .export-result {
   margin-top: 12px;
   padding: 11px 12px;
   border-radius: 18px;
-  background: linear-gradient(145deg, rgba(228, 255, 249, 0.9), rgba(255, 251, 255, 0.86));
+  background: linear-gradient(145deg, rgba(244, 255, 228, 0.9), rgba(255, 251, 255, 0.86));
   box-shadow:
     inset 0 2px 7px rgba(255, 255, 255, 0.88),
-    5px 7px 15px rgba(82, 157, 145, 0.14);
+    5px 7px 15px rgba(126, 157, 82, 0.14);
 }
 
 .export-result span {
   display: block;
-  color: #267c71;
+  color: #587c26;
   font-size: 11px;
   font-weight: 900;
 }
@@ -1908,7 +1919,7 @@ button {
 .export-result small {
   display: block;
   margin-top: 5px;
-  color: #6f8a84;
+  color: #7f8a6f;
   font-size: 10px;
   font-weight: 800;
 }
