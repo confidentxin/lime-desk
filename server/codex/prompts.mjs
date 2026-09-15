@@ -1,3 +1,5 @@
+import { resolveImageSetInnerCount } from "./validation.mjs";
+
 const JSON_ONLY_RULES = [
   "Return only valid JSON.",
   "Do not include Markdown fences.",
@@ -103,6 +105,31 @@ export function buildCodexPrompt(payload) {
       "Do not translate, rename, omit, or nest these keys. coverDirection is required on every item.",
       "Return this exact JSON shape:",
       '{"items":[{"title":"string","body":"string","coverDirection":"string"}]}',
+    ].join("\n");
+  }
+
+  if (payload.kind === "imageSetPlan") {
+    const draft = payload.selectedDraft ?? {};
+    const innerCount = resolveImageSetInnerCount(payload);
+    const totalCount = 1 + innerCount;
+
+    return [
+      baseContext(payload),
+      "",
+      `Selected draft title: ${compactText(draft.title, 240)}`,
+      `Selected draft body: ${compactText(draft.body, 1800)}`,
+      `Selected draft cover direction: ${compactText(draft.coverDirection, 360)}`,
+      "",
+      `Task: Build one unified image set plan for this Xiaohongshu note: 1 cover image plus ${innerCount} inner images (${totalCount} items in total).`,
+      "First provide one shared styleGuide string that fixes the whole series: color palette, materials/textures, composition rules, lighting, and the 4:5 aspect ratio, so every image reads as the same set.",
+      `Then provide exactly ${totalCount} items in reading order: the first item is the cover, the remaining ${innerCount} items are inner pages that continue the same visual series and cover different content points of the draft.`,
+      'Set the "role" field to "cover" on the first item and "inner" on every other item.',
+      "Every prompt must include this exact Chinese boundary phrase: 明确排除真人、脸、手和动物。",
+      "Plants or flowers are allowed. Keep prompts static-life, product/editorial photography oriented.",
+      "Use these exact English keys: styleGuide, items, and on every item: role, title, prompt.",
+      "Do not translate, rename, omit, or nest these keys. Do not return a items-only object.",
+      "Return this exact JSON shape:",
+      `{"styleGuide":"string","items":[{"role":"cover","title":"string","prompt":"string"}]}`,
     ].join("\n");
   }
 

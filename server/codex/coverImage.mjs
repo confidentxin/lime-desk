@@ -10,8 +10,8 @@ const DEFAULT_CODEX_PATH = "codex";
 const GENERATED_ROUTE_PREFIX = "/generated/covers/";
 const IMAGEGEN_TIMEOUT_MS = 600_000;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const generatedDir = path.join(tmpdir(), "xhs-g4-generated-covers");
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const generatedDir = path.join(repoRoot, "data", "generated");
 
 function compactText(value, maxLength = 160) {
   return String(value ?? "")

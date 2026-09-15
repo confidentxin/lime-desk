@@ -3,7 +3,7 @@ import { buildCodexPrompt, buildDecisionPrompt } from "./prompts.mjs";
 import {
   CodexApiError,
   normalizeDecisionResult,
-  normalizeCodexItems,
+  normalizeGenerationOutput,
   parseJsonFromCodex,
 } from "./validation.mjs";
 
@@ -231,7 +231,7 @@ function mapCloudJsonError(error) {
 function parseCloudItems(kind, raw, payload) {
   try {
     const parsed = parseJsonFromCodex(raw);
-    return normalizeCodexItems(kind, parsed, payload);
+    return normalizeGenerationOutput(kind, parsed, payload);
   } catch (error) {
     mapCloudJsonError(error);
   }
@@ -287,10 +287,10 @@ export async function runCloudGeneration(payload) {
     body: buildCloudChatBody({ payload, modelName, baseUrl, prompt }),
   });
   const raw = extractGeneratedText(result.json);
-  const items = parseCloudItems(payload.kind, raw, payload);
+  const output = parseCloudItems(payload.kind, raw, payload);
 
   return {
-    items,
+    ...output,
     raw,
     commandPreview: endpointPreview(endpointUrl),
     durationMs: Date.now() - startedAt,

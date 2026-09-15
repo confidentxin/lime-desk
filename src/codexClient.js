@@ -1,13 +1,56 @@
-async function requestJson(endpoint, payload, fallbackMessage, badJsonCode) {
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+const DEFAULT_API_BASE = "http://127.0.0.1:52881";
+const API_BASE_STORAGE_KEY = "mint-atelier-v2:apiBase";
 
-  const text = await response.text();
+export function getApiBase() {
+  try {
+    const stored = window.localStorage.getItem(API_BASE_STORAGE_KEY);
+    if (stored && stored.trim()) {
+      return stored.trim().replace(/\/+$/, "");
+    }
+  } catch {
+    // localStorage 不可用（隐私模式等）时退回默认地址。
+  }
+  return DEFAULT_API_BASE;
+}
+
+export function resolveAssetUrl(path) {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  const base = getApiBase();
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function backendDownError(apiBase, endpoint, method) {
+  return Object.assign(
+    new Error(`后端服务未启动或不可达（${apiBase}），请先启动后端进程再操作。`),
+    {
+      code: "NETWORK_BACKEND_DOWN",
+      details: `${method} ${endpoint} 网络请求失败`,
+    },
+  );
+}
+
+async function performRequest(endpoint, method, payload, fallbackMessage, badJsonCode) {
+  const apiBase = getApiBase();
+
+  let response;
+  try {
+    response = await fetch(`${apiBase}${endpoint}`, {
+      method,
+      headers: payload === undefined ? undefined : { "Content-Type": "application/json" },
+      body: payload === undefined ? undefined : JSON.stringify(payload),
+    });
+  } catch {
+    throw backendDownError(apiBase, endpoint, method);
+  }
+
+  let text;
+  try {
+    text = await response.text();
+  } catch {
+    throw backendDownError(apiBase, endpoint, method);
+  }
+
   let data;
   try {
     data = JSON.parse(text);
@@ -26,6 +69,14 @@ async function requestJson(endpoint, payload, fallbackMessage, badJsonCode) {
   }
 
   return data;
+}
+
+function requestJson(endpoint, payload, fallbackMessage, badJsonCode) {
+  return performRequest(endpoint, "POST", payload, fallbackMessage, badJsonCode);
+}
+
+function requestJsonGet(endpoint, fallbackMessage, badJsonCode) {
+  return performRequest(endpoint, "GET", undefined, fallbackMessage, badJsonCode);
 }
 
 export async function requestCodexGeneration(payload) {
@@ -157,5 +208,40 @@ export async function requestXhsSearch(payload) {
       failed: "小红书热门内容搜索失败。",
     },
     "XHS_BAD_JSON",
+  );
+}
+
+export async function requestStoreLoad() {
+  return requestJsonGet(
+    "/api/store",
+    {
+      nonJson: "工作区存储服务返回了非 JSON 内容。",
+      failed: "工作区读取失败。",
+    },
+    "STORE_BAD_JSON",
+  );
+}
+
+export async function requestStoreSave(payload) {
+  return requestJson(
+    "/api/store",
+    payload,
+    {
+      nonJson: "工作区存储服务返回了非 JSON 内容。",
+      failed: "工作区保存失败。",
+    },
+    "STORE_BAD_JSON",
+  );
+}
+
+export async function requestExport(payload) {
+  return requestJson(
+    "/api/export",
+    payload,
+    {
+      nonJson: "导出服务返回了非 JSON 内容。",
+      failed: "笔记导出失败。",
+    },
+    "EXPORT_BAD_JSON",
   );
 }

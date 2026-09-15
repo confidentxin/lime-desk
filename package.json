@@ -10,6 +10,7 @@
     "test": "node --test server/codex/cloudProvider.test.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "preview:fixed": "vite preview --host 127.0.0.1 --port 52880 --strictPort",
+    "server": "node server/index.mjs",
     "launch:fixed": "node scripts/start-fixed.mjs",
     "launch:dev": "node scripts/start-fixed.mjs --dev",
     "deploy:local": "npm run build && npm run preview:fixed"

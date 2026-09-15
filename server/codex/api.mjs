@@ -13,7 +13,7 @@ import { runCodex } from "./runCodex.mjs";
 import {
   CodexApiError,
   normalizeDecisionResult,
-  normalizeCodexItems,
+  normalizeGenerationOutput,
   parseJsonFromCodex,
   validateDecisionRequest,
   validateRequest,
@@ -27,8 +27,10 @@ import {
   detectLocalClis,
   runLocalTextCli,
 } from "../localCli/registry.mjs";
+import { applyStoreAction, readWorkspace } from "../store.mjs";
+import { exportNote } from "../export.mjs";
 
-const MAX_BODY_BYTES = 128 * 1024;
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
 function sendJson(res, status, payload) {
   res.statusCode = status;
@@ -95,10 +97,23 @@ export function codexGenerateMiddleware() {
       "/api/cloud/decide",
       "/api/cloud/cover-image",
       "/api/xhs/search",
+      "/api/store",
+      "/api/export",
     ]);
 
     if (!handledPath.has(requestUrl.pathname)) {
       next();
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/store" && req.method === "GET") {
+      try {
+        const workspace = await readWorkspace();
+        sendJson(res, 200, { ok: true, workspace });
+      } catch (error) {
+        const { status, payload } = serializeError(error);
+        sendJson(res, status, payload);
+      }
       return;
     }
 
@@ -113,6 +128,18 @@ export function codexGenerateMiddleware() {
 
     try {
       const payload = await readJsonBody(req);
+
+      if (requestUrl.pathname === "/api/store") {
+        const workspace = await applyStoreAction(payload);
+        sendJson(res, 200, { ok: true, workspace });
+        return;
+      }
+
+      if (requestUrl.pathname === "/api/export") {
+        const result = await exportNote(payload);
+        sendJson(res, 200, { ok: true, ...result });
+        return;
+      }
 
       if (requestUrl.pathname === "/api/local-cli/detect") {
         const clis = await detectLocalClis(payload);
@@ -235,7 +262,8 @@ export function codexGenerateMiddleware() {
 
         sendJson(res, 200, {
           ok: true,
-          kind: payload.kind,
+          kind: cloudResult.kind,
+          styleGuide: cloudResult.styleGuide,
           items: cloudResult.items,
           raw: cloudResult.raw,
           commandPreview: cloudResult.commandPreview,
@@ -255,12 +283,13 @@ export function codexGenerateMiddleware() {
           })
         : await runCodex({ prompt, modelName: payload.modelName });
       const parsed = parseJsonFromCodex(localResult.raw);
-      const items = normalizeCodexItems(payload.kind, parsed, payload);
+      const output = normalizeGenerationOutput(payload.kind, parsed, payload);
 
       sendJson(res, 200, {
         ok: true,
-        kind: payload.kind,
-        items,
+        kind: output.kind,
+        styleGuide: output.styleGuide,
+        items: output.items,
         raw: localResult.raw,
         commandPreview: localResult.commandPreview,
         durationMs: localResult.durationMs,

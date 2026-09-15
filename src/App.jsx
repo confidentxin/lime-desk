@@ -7,7 +7,11 @@ import {
   requestLocalCliDecision,
   requestLocalCliDetection,
   requestLocalCliGeneration,
+  requestExport,
+  requestStoreLoad,
+  requestStoreSave,
   requestXhsSearch,
+  resolveAssetUrl,
 } from "./codexClient.js";
 
 const STORAGE_PREFIX = "mint-atelier-v2";
@@ -76,36 +80,28 @@ const flowSteps = [
   { id: "rag", label: "RAG 入库", meta: "勾选确认" },
   { id: "topics", label: "生成选题", meta: "10 个候选" },
   { id: "drafts", label: "生成文案", meta: "5 篇草稿" },
-  { id: "cover", label: "封面生成", meta: "Prompt 到图" },
+  { id: "cover", label: "配图生成", meta: "方案到整套图" },
 ];
 
 const generationLabels = {
   topics: "选题",
   drafts: "文案",
-  coverPrompts: "封面 Prompt",
+  imageSetPlan: "配图方案",
 };
 
 const decisionLabels = {
   rag: "RAG 参考",
   topic: "选题",
   draft: "文案",
-  coverPrompt: "封面 Prompt",
 };
-
-const sidebarProjects = [
-  { title: "夏日通勤穿搭", meta: "新版流程草稿", active: true },
-  { title: "治愈系家居好物", meta: "待补参考" },
-  { title: "露营装备红榜", meta: "选题阶段" },
-  { title: "轻便出行搭配", meta: "封面待生成" },
-];
 
 const errorMessages = {
   search: "搜索失败：请确认关键词不为空，并检查 xhs CLI 登录状态或网络状态后重试。",
   rag: "RAG 加入失败：请先勾选至少一条搜索结果，再点击加入本地知识库。",
   topics: "选题生成失败：请补充人设、关键词，并至少加入一条参考内容。",
   drafts: "文案生成失败：请先选择一个选题，并补充必要的撰写思路。",
-  prompts: "封面 Prompt 生成失败：请先选择一篇文案。",
-  image: "封面图生成失败：已保留原始 Prompt，可以检查图片模型配置后重新生成。",
+  prompts: "配图方案生成失败：请先选择一篇文案。",
+  image: "整套配图生成失败：请先选择一篇文案，并检查图片模型配置后重试。",
   config: "模型配置缺失：云端 API 需要填写 API Key、API Base URL 和模型名称。",
   key: "API Key 无效：请检查密钥是否完整，或切换到本地 CLI 运行方式。",
   cli: "本地 CLI 不可用：请先检测并选择已安装、已登录且支持当前能力的 CLI。",
@@ -333,10 +329,19 @@ export function App() {
   const [selectedTopicId, setSelectedTopicId] = useState(null);
   const [drafts, setDrafts] = useState([]);
   const [selectedDraftId, setSelectedDraftId] = useState(null);
-  const [prompts, setPrompts] = useState([]);
-  const [selectedPromptId, setSelectedPromptId] = useState(null);
-  const [coverImage, setCoverImage] = useState(null);
+  const [imageSet, setImageSet] = useState(null);
+  const [innerCount, setInnerCount] = useStoredState("innerCount", 4);
+  const [activeImageId, setActiveImageId] = useState(null);
+  const [imageSetProgress, setImageSetProgress] = useState(null);
+  const [previewImageId, setPreviewImageId] = useState(null);
+  const [exportResult, setExportResult] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
   const [lastSavedAt, setLastSavedAt] = useState("");
+  const [projects, setProjects] = useState([]);
+  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [storeState, setStoreState] = useState("loading");
+  const [saveState, setSaveState] = useState("idle");
+  const skipAutoSaveRef = useRef(true);
   const [generatingKind, setGeneratingKind] = useState("");
   const [automationRunning, setAutomationRunning] = useState(false);
   const [automationStage, setAutomationStage] = useState("");
@@ -362,10 +367,12 @@ export function App() {
     () => drafts.find((draft) => draft.id === selectedDraftId),
     [drafts, selectedDraftId],
   );
-  const selectedPrompt = useMemo(
-    () => prompts.find((prompt) => prompt.id === selectedPromptId),
-    [prompts, selectedPromptId],
-  );
+  const imageSetTotal = imageSet?.items?.length ?? 0;
+  const imageSetDoneCount = (imageSet?.items ?? []).filter((item) => item.image).length;
+  const previewItems = useMemo(() => (imageSet?.items ?? []).filter((item) => item.image), [imageSet]);
+  const previewItem =
+    previewItems.find((item) => item.id === previewImageId) ?? previewItems[0] ?? null;
+  const previewIndex = previewItem ? previewItems.indexOf(previewItem) : -1;
 
   const progress = useMemo(() => {
     const checks = [
@@ -375,21 +382,20 @@ export function App() {
       ragItems.length > 0,
       topics.length > 0 && selectedTopic,
       drafts.length > 0 && selectedDraft,
-      prompts.length > 0 && selectedPrompt,
-      Boolean(coverImage),
+      imageSetTotal > 0,
+      imageSetTotal > 0 && imageSetDoneCount === imageSetTotal,
     ];
 
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }, [
-    coverImage,
     drafts.length,
+    imageSetDoneCount,
+    imageSetTotal,
     keyword,
     persona,
-    prompts.length,
     ragItems.length,
     searchResults.length,
     selectedDraft,
-    selectedPrompt,
     selectedTopic,
     topics.length,
   ]);
@@ -582,6 +588,7 @@ export function App() {
 
     return {
       items: result.items,
+      styleGuide: result.styleGuide ?? "",
       routeLabel: providerLabel("text"),
       commandPreview: result.commandPreview,
       durationMs: result.durationMs,
@@ -666,13 +673,16 @@ export function App() {
       setCliStatus({
         state: "success",
         label: routeLabel,
-        text: `${routeLabel} 已生成 ${result.items.length} 条${label}。`,
+        text:
+          kind === "imageSetPlan"
+            ? `${routeLabel} 已生成配图方案（1 张封面 + ${result.items.length - 1} 张内页），可在下方调整后出图。`
+            : `${routeLabel} 已生成 ${result.items.length} 条${label}。`,
         commandPreview: result.commandPreview,
         durationMs: result.durationMs,
         generatedAt: result.generatedAt,
         code: "",
       });
-      return { items: result.items, routeLabel };
+      return { items: result.items, styleGuide: result.styleGuide ?? "", routeLabel };
     } catch (error) {
       const message = error?.message || `${routeLabel}生成失败。`;
       setCliStatus({
@@ -758,9 +768,11 @@ export function App() {
     setSelectedTopicId(null);
     setDrafts([]);
     setSelectedDraftId(null);
-    setPrompts([]);
-    setSelectedPromptId(null);
-    setCoverImage(null);
+    setImageSet(null);
+    setActiveImageId(null);
+    setImageSetProgress(null);
+    setPreviewImageId(null);
+    setExportResult(null);
   };
 
   const toggleSearchResult = (id) => {
@@ -799,9 +811,7 @@ export function App() {
     setSelectedTopicId(nextTopics[0].id);
     setDrafts([]);
     setSelectedDraftId(null);
-    setPrompts([]);
-    setSelectedPromptId(null);
-    setCoverImage(null);
+    setImageSet(null);
     setActiveStep("topics");
     setSuccess(`已通过 ${result.routeLabel} 生成 10 个选题。`);
   };
@@ -819,49 +829,138 @@ export function App() {
 
     setDrafts(nextDrafts);
     setSelectedDraftId(nextDrafts[0].id);
-    setPrompts([]);
-    setSelectedPromptId(null);
-    setCoverImage(null);
+    setImageSet(null);
     setActiveStep("drafts");
-    setSuccess(`已通过 ${result.routeLabel} 生成 5 篇文案，可选择一篇继续生成封面 Prompt。`);
+    setSuccess(`已通过 ${result.routeLabel} 生成 5 篇文案，可选择一篇继续生成配图方案。`);
   };
 
-  const generatePrompts = async () => {
+  const composeImagePrompt = (styleGuideValue, item) => {
+    const guide = String(styleGuideValue ?? "").trim();
+    const prompt = String(item.prompt ?? "").trim();
+    return guide ? `${guide}\n\n${prompt}` : prompt;
+  };
+
+  const generateImageSetPlan = async () => {
     if (!selectedDraft) {
       setError("prompts");
       return;
     }
     if (!requireTextModel()) return;
 
-    const result = await runTextGeneration("coverPrompts", {
+    const result = await runTextGeneration("imageSetPlan", {
       selectedTopic,
       selectedDraft,
+      innerCount,
     });
     if (!result) return;
-    const nextPrompts = result.items;
 
-    setPrompts(nextPrompts);
-    setSelectedPromptId(nextPrompts[0].id);
-    setCoverImage(null);
+    setImageSet({
+      styleGuide: result.styleGuide,
+      items: result.items.map((item) => ({ ...item, image: null })),
+    });
+    setActiveImageId(null);
+    setImageSetProgress(null);
+    setPreviewImageId(null);
+    setExportResult(null);
     setActiveStep("cover");
-    setSuccess(`已通过 ${result.routeLabel} 生成 5 份封面 Prompt，默认不包含真人、脸、手和动物。`);
+    setSuccess(`已通过 ${result.routeLabel} 生成配图方案（含统一风格规范），可编辑后逐张生成整套配图。`);
   };
 
-  const generateCoverImage = async (promptId = selectedPromptId) => {
-    const prompt = prompts.find((item) => item.id === promptId);
-    if (!prompt) {
+  const updateStyleGuide = (value) => {
+    setImageSet((current) => (current ? { ...current, styleGuide: value } : current));
+  };
+
+  const updateImageSetItem = (itemId, field, value) => {
+    setImageSet((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item) =>
+              item.id === itemId ? { ...item, [field]: value } : item,
+            ),
+          }
+        : current,
+    );
+  };
+
+  const requestImageForItem = async (item, styleGuideValue, selectedDraftValue, contextOverrides = {}) =>
+    requestCoverImageResult(
+      { title: item.title, prompt: composeImagePrompt(styleGuideValue, item) },
+      selectedDraftValue,
+      contextOverrides,
+    );
+
+  const applyItemResult = (itemId, result) => {
+    setImageSet((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item) =>
+              item.id === itemId
+                ? {
+                    ...item,
+                    image: {
+                      ...result.image,
+                      src: resolveAssetUrl(result.image.src),
+                      createdAt: nowText(),
+                      generatedAt: result.generatedAt,
+                    },
+                  }
+                : item,
+            ),
+          }
+        : current,
+    );
+  };
+
+  const generateImageSetSerial = async (pendingItems, styleGuideValue, selectedDraftValue, contextOverrides = {}) => {
+    const routeLabel = providerLabel("image");
+    const total = pendingItems.length;
+
+    for (let index = 0; index < total; index += 1) {
+      const item = pendingItems[index];
+      setActiveImageId(item.id);
+      setImageSetProgress({ index: index + 1, total });
+      setCliStatus({
+        state: "running",
+        label: routeLabel,
+        text: `正在通过 ${routeLabel} 生成第 ${index + 1}/${total} 张：${item.title}...`,
+        commandPreview: providerPreview("image"),
+        durationMs: null,
+        generatedAt: "",
+        code: "",
+      });
+
+      const result = await requestImageForItem(item, styleGuideValue, selectedDraftValue, contextOverrides);
+      applyItemResult(item.id, result);
+
+      setCliStatus({
+        state: "success",
+        label: routeLabel,
+        text: `${routeLabel} 已完成第 ${index + 1}/${total} 张：${item.title}。`,
+        commandPreview: result.commandPreview,
+        durationMs: result.durationMs,
+        generatedAt: result.generatedAt,
+        code: "",
+      });
+    }
+  };
+
+  const generateImageSetItem = async (itemId) => {
+    const item = (imageSet?.items ?? []).find((candidate) => candidate.id === itemId);
+    if (!item || !selectedDraft) {
       setError("image");
       return;
     }
     if (!requireImageModel()) return;
 
     const routeLabel = providerLabel("image");
-    setSelectedPromptId(promptId);
-    setGeneratingKind("coverImage");
+    setActiveImageId(itemId);
+    setGeneratingKind("imageSetItem");
     setCliStatus({
       state: "running",
       label: routeLabel,
-      text: `正在通过 ${routeLabel} 生成封面图...`,
+      text: `正在通过 ${routeLabel} 生成「${item.title}」...`,
       commandPreview: providerPreview("image"),
       durationMs: null,
       generatedAt: "",
@@ -869,29 +968,21 @@ export function App() {
     });
 
     try {
-      const result = await requestCoverImageResult(prompt, selectedDraft);
-
-      setCoverImage({
-        promptId,
-        src: result.image.src,
-        alt: result.image.alt,
-        title: result.image.title,
-        createdAt: nowText(),
-        generatedAt: result.generatedAt,
-      });
+      const result = await requestImageForItem(item, imageSet.styleGuide, selectedDraft);
+      applyItemResult(itemId, result);
       setCliStatus({
         state: "success",
         label: routeLabel,
-        text: `${routeLabel} 已生成封面图。`,
+        text: `${routeLabel} 已生成「${item.title}」的配图。`,
         commandPreview: result.commandPreview,
         durationMs: result.durationMs,
         generatedAt: result.generatedAt,
         code: "",
       });
       setActiveStep("cover");
-      setSuccess(`已通过 ${routeLabel} 生成封面图，原始 Prompt 已保留。`);
+      setSuccess(`已通过 ${routeLabel} 生成「${item.title}」的配图。`);
     } catch (error) {
-      const message = error?.message || `${routeLabel}封面图生成失败。`;
+      const message = error?.message || `${routeLabel}配图生成失败。`;
       setCliStatus({
         state: "error",
         label: routeLabel,
@@ -904,6 +995,49 @@ export function App() {
       setCustomError(message);
     } finally {
       setGeneratingKind("");
+      setActiveImageId(null);
+    }
+  };
+
+  const generateAllImages = async () => {
+    if (!imageSet || imageSet.items.length === 0 || !selectedDraft) {
+      setError("image");
+      return;
+    }
+    if (!requireImageModel()) return;
+
+    const pendingItems = imageSet.items.filter((item) => !item.image);
+    if (pendingItems.length === 0) {
+      setSuccess("整套配图已全部生成，可对单张使用「重新生成」。");
+      return;
+    }
+
+    setGeneratingKind("imageSet");
+    setNotice({
+      type: "success",
+      text: `已开始串行生成 ${pendingItems.length} 张配图：本次点击授权逐张调用图片模型。`,
+    });
+
+    try {
+      await generateImageSetSerial(pendingItems, imageSet.styleGuide, selectedDraft);
+      setActiveStep("cover");
+      setSuccess(`整套配图已完成：${imageSetDoneCount + pendingItems.length}/${imageSetTotal} 张已生成。`);
+    } catch (error) {
+      const message = error?.message || "整套配图生成中断。";
+      setCliStatus({
+        state: "error",
+        label: "整套配图",
+        text: message,
+        commandPreview: "",
+        durationMs: null,
+        generatedAt: "",
+        code: error?.code || "CODEX_FAILED",
+      });
+      setCustomError(`整套配图生成中断：${message}`);
+    } finally {
+      setGeneratingKind("");
+      setActiveImageId(null);
+      setImageSetProgress(null);
     }
   };
 
@@ -928,7 +1062,7 @@ export function App() {
 
     setAutomationRunning(true);
     resetGeneratedState();
-    setNotice({ type: "success", text: "自动化生成已开始：本次点击授权搜索、模型决策入库、生成和封面图生成。" });
+    setNotice({ type: "success", text: "自动化生成已开始：本次点击授权搜索、模型决策入库、生成和整套配图。" });
 
     try {
       moveAutomationStage("搜索热门内容");
@@ -1037,74 +1171,43 @@ export function App() {
       const nextSelectedDraft = nextDrafts.find((draft) => draft.id === draftDecision.selectedIds[0]);
       setSelectedDraftId(nextSelectedDraft.id);
 
-      moveAutomationStage("生成 5 份封面 Prompt");
-      setGeneratingKind("coverPrompts");
+      moveAutomationStage("生成配图方案");
+      setGeneratingKind("imageSetPlan");
       setCliStatus({
         state: "running",
         label: providerLabel("text"),
-        text: `自动化正在通过 ${providerLabel("text")} 生成封面 Prompt...`,
+        text: `自动化正在通过 ${providerLabel("text")} 生成配图方案...`,
         commandPreview: providerPreview("text"),
         durationMs: null,
         generatedAt: "",
         code: "",
       });
-      const promptResult = await requestTextItems(
-        "coverPrompts",
-        { selectedTopic: nextSelectedTopic, selectedDraft: nextSelectedDraft },
+      const planResult = await requestTextItems(
+        "imageSetPlan",
+        { selectedTopic: nextSelectedTopic, selectedDraft: nextSelectedDraft, innerCount },
         context,
       );
-      const nextPrompts = promptResult.items;
-      setPrompts(nextPrompts);
+      const nextImageSet = {
+        styleGuide: planResult.styleGuide ?? "",
+        items: planResult.items.map((item) => ({ ...item, image: null })),
+      };
+      setImageSet(nextImageSet);
       setActiveStep("cover");
       setCliStatus({
         state: "success",
-        label: promptResult.routeLabel,
-        text: `${promptResult.routeLabel} 已生成 ${nextPrompts.length} 份封面 Prompt，自动化将选择 1 份生成封面图。`,
-        commandPreview: promptResult.commandPreview,
-        durationMs: promptResult.durationMs,
-        generatedAt: promptResult.generatedAt,
+        label: planResult.routeLabel,
+        text: `${planResult.routeLabel} 已生成配图方案（${nextImageSet.items.length} 张），自动化将逐张生成整套配图。`,
+        commandPreview: planResult.commandPreview,
+        durationMs: planResult.durationMs,
+        generatedAt: planResult.generatedAt,
         code: "",
       });
 
-      moveAutomationStage("选择封面 Prompt");
-      const promptDecision = await requestDecision("coverPrompt", nextPrompts, context, {
-        selectedTopic: nextSelectedTopic,
-        selectedDraft: nextSelectedDraft,
-      });
-      const nextSelectedPrompt = nextPrompts.find((prompt) => prompt.id === promptDecision.selectedIds[0]);
-      setSelectedPromptId(nextSelectedPrompt.id);
+      moveAutomationStage("生成整套配图");
+      setGeneratingKind("imageSet");
+      await generateImageSetSerial(nextImageSet.items, nextImageSet.styleGuide, nextSelectedDraft, context);
 
-      moveAutomationStage("生成封面图");
-      setGeneratingKind("coverImage");
-      const imageRouteLabel = providerLabel("image");
-      setCliStatus({
-        state: "running",
-        label: imageRouteLabel,
-        text: `自动化正在通过${imageRouteLabel}生成封面图...`,
-        commandPreview: providerPreview("image"),
-        durationMs: null,
-        generatedAt: "",
-        code: "",
-      });
-      const coverResult = await requestCoverImageResult(nextSelectedPrompt, nextSelectedDraft, context);
-      setCoverImage({
-        promptId: nextSelectedPrompt.id,
-        src: coverResult.image.src,
-        alt: coverResult.image.alt,
-        title: coverResult.image.title,
-        createdAt: nowText(),
-        generatedAt: coverResult.generatedAt,
-      });
-      setCliStatus({
-        state: "success",
-        label: imageRouteLabel,
-        text: `${imageRouteLabel}已生成封面图。`,
-        commandPreview: coverResult.commandPreview,
-        durationMs: coverResult.durationMs,
-        generatedAt: coverResult.generatedAt,
-        code: "",
-      });
-      setSuccess("自动化生成已完成：热门参考、RAG、选题、文案、封面 Prompt 和封面图均已生成并保留可见选择。");
+      setSuccess("自动化生成已完成：热门参考、RAG、选题、文案、配图方案和整套配图均已生成。");
     } catch (error) {
       const message = error?.message || "自动化生成失败。";
       setCliStatus({
@@ -1121,13 +1224,303 @@ export function App() {
       setAutomationRunning(false);
       setAutomationStage("");
       setGeneratingKind("");
+      setActiveImageId(null);
+      setImageSetProgress(null);
     }
   };
 
+  const extractTags = (body) => {
+    const matches = String(body ?? "").matchAll(/#([^#[\]]+)\[话题\]#/g);
+    return [...new Set([...matches].map((match) => match[1].trim()).filter(Boolean))];
+  };
+
+  const exportNote = async () => {
+    if (!selectedDraft) {
+      setError("drafts");
+      return;
+    }
+    if (!activeProjectId) {
+      setCustomError("导出前请先保存项目（点左侧「保存」或「新建」）。");
+      return;
+    }
+
+    setGeneratingKind("export");
+    setCliStatus({
+      state: "running",
+      label: "笔记导出",
+      text: "正在导出 note.md 与整套配图...",
+      commandPreview: "POST /api/export",
+      durationMs: null,
+      generatedAt: "",
+      code: "",
+    });
+
+    try {
+      const result = await requestExport({
+        projectId: activeProjectId,
+        title: selectedDraft.title,
+        body: selectedDraft.body,
+        tags: extractTags(selectedDraft.body),
+        imageSet: imageSet
+          ? { styleGuide: imageSet.styleGuide, items: imageSet.items }
+          : undefined,
+      });
+
+      setExportResult(result);
+      setCliStatus({
+        state: "success",
+        label: "笔记导出",
+        text: `已导出到 ${result.exportDir}（${result.files?.length ?? 0} 个文件）。`,
+        commandPreview: "POST /api/export",
+        durationMs: result.durationMs ?? null,
+        generatedAt: result.generatedAt ?? "",
+        code: "",
+      });
+      setSuccess(`笔记已导出到 ${result.exportDir}。`);
+    } catch (error) {
+      const message = error?.message || "笔记导出失败。";
+      setCliStatus({
+        state: "error",
+        label: "笔记导出",
+        text: message,
+        commandPreview: "",
+        durationMs: null,
+        generatedAt: "",
+        code: error?.code || "EXPORT_FAILED",
+      });
+      setCustomError(`笔记导出失败：${message}`);
+    } finally {
+      setGeneratingKind("");
+    }
+  };
+
+  const makeProjectId = () => `proj-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  const applyWorkspace = (workspace) => {
+    const nextProjects = Array.isArray(workspace?.projects) ? workspace.projects : [];
+    setProjects(nextProjects);
+    // 后端在空工作区返回 ""（而非 null），统一归一化，避免空串被当成有效项目 id。
+    setActiveProjectId(workspace?.activeProjectId || null);
+    return nextProjects;
+  };
+
+  const applyProject = (project) => {
+    if (!project) return;
+    skipAutoSaveRef.current = true;
+    setPersona(project.persona ?? "");
+    setKeyword(project.keyword ?? "");
+    setWritingBrief(project.writingBrief ?? "");
+    setSearchResults(Array.isArray(project.searchResults) ? project.searchResults : []);
+    setSelectedSearchIds([]);
+    setRagItems(Array.isArray(project.ragItems) ? project.ragItems : []);
+    setTopics(Array.isArray(project.topics) ? project.topics : []);
+    setSelectedTopicId(project.selectedTopicId ?? null);
+    setDrafts(Array.isArray(project.drafts) ? project.drafts : []);
+    setSelectedDraftId(project.selectedDraftId ?? null);
+    setImageSet(project.imageSet ?? null);
+    setActiveImageId(null);
+    setImageSetProgress(null);
+    setActiveStep(
+      project.imageSet
+        ? "cover"
+        : (project.drafts ?? []).length
+          ? "drafts"
+          : (project.topics ?? []).length
+            ? "topics"
+            : (project.ragItems ?? []).length
+              ? "rag"
+              : (project.searchResults ?? []).length
+                ? "research"
+                : "input",
+    );
+  };
+
+  const projectPayload = (overrides = {}) => {
+    const id = overrides.id ?? (activeProjectId || makeProjectId());
+    const existing = projects.find((project) => project.id === id);
+    const titleBase = (keywordRef.current?.value ?? keyword).trim() || "未命名";
+    return {
+      id,
+      title: existing?.title ?? `${titleBase} @ ${nowText()}`,
+      persona,
+      keyword,
+      writingBrief,
+      searchResults,
+      ragItems,
+      topics,
+      selectedTopicId,
+      drafts,
+      selectedDraftId,
+      imageSet,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...overrides,
+    };
+  };
+
+  const saveActiveProject = async (overrides = {}) => {
+    if (storeState === "error") {
+      setCustomError("工作区存储不可用，无法保存项目。请确认后端已启动。");
+      return false;
+    }
+    const project = projectPayload(overrides);
+    setSaveState("saving");
+    try {
+      const result = await requestStoreSave({ action: "saveProject", project });
+      applyWorkspace(result.workspace);
+      setActiveProjectId(project.id);
+      setLastSavedAt(nowText());
+      setSaveState("saved");
+      return true;
+    } catch (error) {
+      const message = error?.message || "项目保存失败。";
+      setSaveState("error");
+      setCustomError(`项目保存失败：${message}`);
+      return false;
+    }
+  };
+
+  const createNewProject = async () => {
+    if (storeState === "error") {
+      setCustomError("工作区存储不可用，无法新建项目。请确认后端已启动。");
+      return;
+    }
+    const id = makeProjectId();
+    const titleBase = (keywordRef.current?.value ?? keyword).trim() || "未命名";
+    const timestamp = new Date().toISOString();
+    const project = {
+      id,
+      title: `${titleBase} @ ${nowText()}`,
+      persona,
+      keyword,
+      writingBrief,
+      searchResults: [],
+      ragItems: [],
+      topics: [],
+      selectedTopicId: null,
+      drafts: [],
+      selectedDraftId: null,
+      imageSet: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    skipAutoSaveRef.current = true;
+    resetGeneratedState();
+    setActiveStep("input");
+    setSaveState("saving");
+    try {
+      const result = await requestStoreSave({ action: "saveProject", project });
+      applyWorkspace(result.workspace);
+      setActiveProjectId(id);
+      setLastSavedAt(nowText());
+      setSaveState("saved");
+      setSuccess(`已新建项目「${project.title}」。`);
+    } catch (error) {
+      const message = error?.message || "项目新建失败。";
+      setSaveState("error");
+      setCustomError(`项目新建失败：${message}`);
+    }
+  };
+
+  const loadProject = async (project) => {
+    applyProject(project);
+    setActiveProjectId(project.id);
+    setSuccess(`已加载项目「${project.title}」。`);
+    if (storeState === "error") return;
+    try {
+      const result = await requestStoreSave({ action: "setActive", projectId: project.id });
+      applyWorkspace(result.workspace);
+      setActiveProjectId(project.id);
+    } catch (error) {
+      setCustomError(`切换项目失败：${error?.message || "未知错误"}`);
+    }
+  };
+
+  const deleteProject = async (project) => {
+    if (storeState === "error") {
+      setCustomError("工作区存储不可用，无法删除项目。请确认后端已启动。");
+      return;
+    }
+    if (!window.confirm(`删除项目「${project.title}」？此操作不可撤销。`)) return;
+    try {
+      const result = await requestStoreSave({ action: "deleteProject", projectId: project.id });
+      const nextProjects = applyWorkspace(result.workspace);
+      if (project.id === activeProjectId) {
+        const nextActive = nextProjects.find((item) => item.id === result.workspace?.activeProjectId);
+        if (nextActive) applyProject(nextActive);
+        else {
+          skipAutoSaveRef.current = true;
+          resetGeneratedState();
+          setActiveStep("input");
+        }
+      }
+      setSuccess(`已删除项目「${project.title}」。`);
+    } catch (error) {
+      setCustomError(`项目删除失败：${error?.message || "未知错误"}`);
+    }
+  };
+
+  const projectMeta = (project) => {
+    const total = project.imageSet?.items?.length ?? 0;
+    const done = (project.imageSet?.items ?? []).filter((item) => item.image).length;
+    const bits = [`参考 ${project.ragItems?.length ?? 0}`];
+    if (total > 0) bits.push(`配图 ${done}/${total}`);
+    if (project.updatedAt) {
+      bits.push(
+        `更新 ${new Date(project.updatedAt).toLocaleString("zh-CN", {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`,
+      );
+    }
+    return bits.join(" · ");
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await requestStoreLoad();
+        if (cancelled) return;
+        const nextProjects = applyWorkspace(result.workspace ?? { projects: [] });
+        const active = nextProjects.find((project) => project.id === result.workspace?.activeProjectId);
+        if (active) applyProject(active);
+        setStoreState("ready");
+        if (nextProjects.length > 0) {
+          setSuccess(`已恢复 ${nextProjects.length} 个草稿项目${active ? `，当前项目「${active.title}」` : ""}。`);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setStoreState("error");
+        setCustomError(`工作区读取失败：${error?.message || "未知错误"}`);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // 仅在应用启动时恢复一次工作区。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!activeProjectId) return;
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false;
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      saveActiveProject();
+    }, 800);
+    return () => clearTimeout(timer);
+    // 阶段结果变化后防抖自动保存当前项目。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persona, keyword, writingBrief, searchResults, ragItems, topics, selectedTopicId, drafts, selectedDraftId, imageSet]);
+
   const saveDraft = () => {
-    const savedAt = nowText();
-    setLastSavedAt(savedAt);
-    setSuccess(`草稿已保存到本地状态，保存时间 ${savedAt}。`);
+    saveActiveProject();
   };
 
   return (
@@ -1179,22 +1572,59 @@ export function App() {
         <section className="project-list">
           <header>
             <h3>草稿项目</h3>
-            <button type="button" onClick={saveDraft}>保存</button>
+            <div className="project-actions">
+              <button type="button" onClick={createNewProject} disabled={storeState === "loading"}>
+                新建
+              </button>
+              <button type="button" onClick={saveDraft} disabled={storeState === "loading" || saveState === "saving"}>
+                {saveState === "saving" ? "保存中..." : "保存"}
+              </button>
+            </div>
           </header>
-          {sidebarProjects.map((project) => (
-            <button key={project.title} className={project.active ? "project active" : "project"} type="button">
-              <SoftIcon tone={project.active ? "mint" : "pink"}>稿</SoftIcon>
-              <span>
-                <strong>{project.title}</strong>
-                <small>{project.meta}</small>
-              </span>
-            </button>
-          ))}
+          {storeState === "loading" ? (
+            <div className="empty-state compact">
+              <SoftIcon tone="pink">…</SoftIcon>
+              <p>正在读取工作区...</p>
+            </div>
+          ) : projects.length === 0 ? (
+            <div className="empty-state compact">
+              <SoftIcon tone="pink">空</SoftIcon>
+              <p>{storeState === "error" ? "工作区不可用，启动后端后即可保存项目。" : "还没有草稿项目，点「新建」开始。"}</p>
+            </div>
+          ) : (
+            projects.map((project) => (
+              <div key={project.id} className={project.id === activeProjectId ? "project-row active" : "project-row"}>
+                <button className="project" type="button" onClick={() => loadProject(project)}>
+                  <SoftIcon tone={project.id === activeProjectId ? "mint" : "pink"}>稿</SoftIcon>
+                  <span>
+                    <strong>{project.title}</strong>
+                    <small>{projectMeta(project)}</small>
+                  </span>
+                </button>
+                <button
+                  className="project-delete"
+                  type="button"
+                  title="删除项目"
+                  onClick={() => deleteProject(project)}
+                >
+                  ×
+                </button>
+              </div>
+            ))
+          )}
         </section>
 
         <button className="settings-button" type="button" onClick={() => setActiveStep("cover")}>
           <SoftIcon tone="lavender">收</SoftIcon>
-          <span>{lastSavedAt ? `已保存 ${lastSavedAt}` : "保存与继续编辑"}</span>
+          <span>
+            {saveState === "error"
+              ? "保存失败：请检查后端"
+              : saveState === "saving"
+                ? "正在保存..."
+                : lastSavedAt
+                  ? `已保存 ${lastSavedAt}`
+                  : "保存与继续编辑"}
+          </span>
         </button>
       </aside>
 
@@ -1204,7 +1634,7 @@ export function App() {
           <div className="overview-copy">
             <StageBadge tone="mint">新版流程</StageBadge>
             <h2>从关键词到可发布草稿</h2>
-            <p>人设、热门参考、选题、文案、封面 Prompt 和封面图支持手动逐步推进，也可以一次点击自动化生成。</p>
+            <p>人设、热门参考、选题、文案、配图方案和整套配图支持手动逐步推进，也可以一次点击自动化生成。</p>
             <div className="metric-grid">
               <div className="metric">
                 <span>搜索结果</span>
@@ -1448,7 +1878,16 @@ export function App() {
           </article>
 
           <article className="preview clay-panel">
-            <SectionHeader icon="预" tone="pink" title="小红书预览" meta="选择文案后实时查看草稿" />
+            <SectionHeader
+              icon="预"
+              tone="pink"
+              title="小红书预览"
+              meta={
+                previewItems.length > 1
+                  ? `${previewItems.length} 张配图，可切换查看`
+                  : "选择文案后实时查看草稿"
+              }
+            />
             <div className="post-card">
               <div className="post-author">
                 <img src="/assets/avatar-creator.png" alt="" />
@@ -1458,11 +1897,38 @@ export function App() {
               <div className="post-cover-wrap">
                 <img
                   className="post-cover"
-                  src={coverImage?.src ?? "/assets/spring-outfit.png"}
-                  alt={coverImage?.alt ?? "夏日穿搭系列封面预览"}
+                  src={previewItem?.image?.src ?? "/assets/spring-outfit.png"}
+                  alt={previewItem?.image?.alt ?? "夏日穿搭系列封面预览"}
+                  onClick={
+                    previewItem
+                      ? () =>
+                          setLightbox({
+                            src: previewItem.image.src,
+                            alt: previewItem.image.alt,
+                            title: previewItem.title,
+                          })
+                      : undefined
+                  }
                 />
-                <span className="cover-count">{coverImage ? "已生成" : "预览"}</span>
+                <span className="cover-count">
+                  {previewItem ? `${previewIndex + 1}/${previewItems.length}` : "预览"}
+                </span>
               </div>
+              {previewItems.length > 1 ? (
+                <div className="post-thumbs" aria-label="配图切换">
+                  {previewItems.map((item, index) => (
+                    <button
+                      key={item.id}
+                      className={item.id === previewItem?.id ? "post-thumb active" : "post-thumb"}
+                      type="button"
+                      onClick={() => setPreviewImageId(item.id)}
+                    >
+                      <img src={item.image.src} alt={item.title} />
+                      <span>{index + 1}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <h3>{selectedDraft?.title ?? "选择一篇文案后，这里显示小红书标题"}</h3>
               <p>{selectedDraft?.body ?? "正文预览会保留话题标签格式，例如 #夏日通勤[话题]#。"}</p>
               <footer>
@@ -1479,76 +1945,165 @@ export function App() {
             <SectionHeader
               icon="图"
               tone="rose"
-              title="封面 Prompt 与封面图"
-              meta="Prompt 默认禁真人、脸、手和动物，允许植物花材"
+              title="配图方案与整套配图"
+              meta="统一风格规范 + 逐张生成；Prompt 默认禁真人、脸、手和动物"
               action={
-                <button
-                  className="primary-button"
-                  disabled={isBusy}
-                  type="button"
-                  onClick={generatePrompts}
-                >
-                  {generatingKind === "coverPrompts" ? "生成中..." : "生成 Prompt"}
-                </button>
+                <div className="section-actions">
+                  <label className="inner-count-field">
+                    <span>内页</span>
+                    <select
+                      value={innerCount}
+                      disabled={isBusy}
+                      onChange={(event) => setInnerCount(Number(event.target.value))}
+                    >
+                      {[3, 4, 5, 6].map((count) => (
+                        <option key={count} value={count}>{count} 张</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="primary-button"
+                    disabled={isBusy}
+                    type="button"
+                    onClick={generateImageSetPlan}
+                  >
+                    {generatingKind === "imageSetPlan" ? "生成中..." : "生成配图方案"}
+                  </button>
+                </div>
               }
             />
-            <div className="prompt-list">
-              {prompts.length === 0 ? (
-                <div className="empty-state inline">
-                  <SoftIcon tone="rose">P</SoftIcon>
-                  <p>选择文案后生成 5 份封面 Prompt。</p>
+
+            {!imageSet ? (
+              <div className="empty-state inline">
+                <SoftIcon tone="rose">案</SoftIcon>
+                <p>选择一篇文案后生成配图方案：1 张封面 + {innerCount} 张内页，风格统一、可编辑。</p>
+              </div>
+            ) : (
+              <>
+                <label className="field style-guide-field">
+                  <span>统一风格规范（可编辑，出图时自动拼入每张 Prompt）</span>
+                  <textarea
+                    value={imageSet.styleGuide}
+                    onChange={(event) => updateStyleGuide(event.target.value)}
+                  />
+                </label>
+                <div className="image-item-list">
+                  {imageSet.items.map((item) => (
+                    <article
+                      key={item.id}
+                      className={activeImageId === item.id ? "image-item-card active" : "image-item-card"}
+                    >
+                      <header>
+                        <StageBadge tone={item.role === "cover" ? "rose" : "blue"}>
+                          {item.role === "cover" ? "封面" : "内页"}
+                        </StageBadge>
+                        <input
+                          className="image-item-title"
+                          value={item.title}
+                          onChange={(event) => updateImageSetItem(item.id, "title", event.target.value)}
+                        />
+                        <button
+                          className="soft-button mint"
+                          disabled={isBusy}
+                          type="button"
+                          onClick={() => generateImageSetItem(item.id)}
+                        >
+                          {activeImageId === item.id ? "生成中..." : item.image ? "重新生成" : "生成"}
+                        </button>
+                      </header>
+                      <textarea
+                        className="image-item-prompt"
+                        value={item.prompt}
+                        onChange={(event) => updateImageSetItem(item.id, "prompt", event.target.value)}
+                      />
+                    </article>
+                  ))}
                 </div>
-              ) : (
-                prompts.map((prompt) => (
+                <footer className="image-set-actions">
                   <button
-                    key={prompt.id}
-                    className={selectedPromptId === prompt.id ? "prompt-card selected" : "prompt-card"}
+                    className="primary-button"
                     disabled={isBusy}
-                    onClick={() => generateCoverImage(prompt.id)}
                     type="button"
+                    onClick={generateAllImages}
                   >
-                    <strong>{prompt.title}</strong>
-                    <p>{prompt.prompt}</p>
+                    {generatingKind === "imageSet"
+                      ? `生成中 ${imageSetProgress ? `${imageSetProgress.index}/${imageSetProgress.total}` : ""}...`
+                      : `生成整套配图（${imageSetTotal - imageSetDoneCount} 张待生成）`}
                   </button>
-                ))
-              )}
-            </div>
+                  <small>
+                    已生成 {imageSetDoneCount}/{imageSetTotal} 张 · 串行逐张调用图片模型
+                  </small>
+                </footer>
+              </>
+            )}
           </article>
 
           <article className="cover-result clay-panel">
             <SectionHeader
               icon="成"
               tone="mint"
-              title="封面结果"
-              meta={generatingKind === "coverImage" ? "正在生成封面图" : coverImage ? `生成于 ${coverImage.createdAt}` : "点击 Prompt 后生成"}
+              title="成品画廊"
+              meta={
+                generatingKind === "imageSet" || generatingKind === "imageSetItem"
+                  ? "正在生成配图..."
+                  : imageSetTotal > 0
+                    ? `已生成 ${imageSetDoneCount}/${imageSetTotal} 张 · 点击放大`
+                    : "生成方案后逐张出图"
+              }
+              action={
+                <button
+                  className="soft-button mint"
+                  disabled={isBusy || !selectedDraft}
+                  type="button"
+                  onClick={exportNote}
+                >
+                  {generatingKind === "export" ? "导出中..." : "导出笔记"}
+                </button>
+              }
             />
-            <div className="cover-frame">
-              {generatingKind === "coverImage" ? (
-                <div className="cover-placeholder">
-                  <SoftIcon tone="mint">成</SoftIcon>
-                  <p>正在生成封面图...</p>
-                </div>
-              ) : coverImage ? (
-                <img src={coverImage.src} alt={coverImage.alt} />
-              ) : (
-                <div className="cover-placeholder">
+            <div className="gallery-grid">
+              {imageSetTotal === 0 ? (
+                <div className="empty-state">
                   <SoftIcon tone="mint">图</SoftIcon>
-                  <p>封面图会展示在这里。</p>
+                  <p>整套配图会以 4:5 画廊展示在这里。</p>
                 </div>
+              ) : (
+                imageSet.items.map((item) =>
+                  item.image ? (
+                    <button
+                      key={item.id}
+                      className={item.id === previewItem?.id ? "gallery-thumb current" : "gallery-thumb"}
+                      type="button"
+                      onClick={() => {
+                        setPreviewImageId(item.id);
+                        setLightbox({ src: item.image.src, alt: item.image.alt, title: item.title });
+                      }}
+                    >
+                      <img src={item.image.src} alt={item.image.alt} />
+                      <span>{item.title}</span>
+                    </button>
+                  ) : (
+                    <div
+                      key={item.id}
+                      className={activeImageId === item.id ? "gallery-thumb pending active" : "gallery-thumb pending"}
+                    >
+                      <SoftIcon tone="mint">{activeImageId === item.id ? "…" : "待"}</SoftIcon>
+                      <span>{item.title}</span>
+                    </div>
+                  ),
+                )
               )}
             </div>
-            <div className="prompt-keeper">
-              <span>原始 Prompt</span>
-              <p>{selectedPrompt?.prompt ?? "尚未选择封面 Prompt。"}</p>
-              <button
-                className="soft-button mint"
-                disabled={isBusy}
-                type="button"
-                onClick={() => generateCoverImage()}
-              >
-                {generatingKind === "coverImage" ? "生成中..." : "重新生成"}
-              </button>
-            </div>
+            {exportResult ? (
+              <div className="export-result">
+                <span>导出目录</span>
+                <code>{exportResult.exportDir}</code>
+                <small>
+                  {exportResult.files?.length ?? 0} 个文件
+                  {exportResult.skipped?.length ? ` · 跳过 ${exportResult.skipped.length} 个缺失文件` : ""}
+                </small>
+              </div>
+            ) : null}
           </article>
         </section>
         </div>
@@ -1597,7 +2152,7 @@ export function App() {
             <span>搜索</span>
             <span>入库</span>
             <span>生成</span>
-            <span>封面</span>
+            <span>配图</span>
             <strong>{automationRunning ? `自动化：${automationStage}` : "手动逐步或自动化一次确认"}</strong>
           </div>
           <div className={`cli-status ${cliStatus.state}`}>
@@ -1619,8 +2174,8 @@ export function App() {
               rag: "RAG 失败",
               topics: "选题失败",
               drafts: "文案失败",
-              prompts: "Prompt 失败",
-              image: "封面失败",
+              prompts: "方案失败",
+              image: "配图失败",
               config: "配置缺失",
               key: "Key 无效",
               cli: "CLI 不可用",
@@ -1634,6 +2189,15 @@ export function App() {
         </section>
         </div>
       </aside>
+
+      {lightbox ? (
+        <div className="lightbox-overlay" role="presentation" onClick={() => setLightbox(null)}>
+          <figure>
+            <img src={lightbox.src} alt={lightbox.alt} />
+            <figcaption>{lightbox.title} · 点击任意处关闭</figcaption>
+          </figure>
+        </div>
+      ) : null}
     </main>
   );
 }

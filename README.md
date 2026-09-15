@@ -10,12 +10,16 @@
 
 ## 本地运行
 
+应用是前后端分离的两个进程：后端 API 服务监听 `http://127.0.0.1:52881`（接口契约见 `docs/API.md`），前端是纯静态 Vite 站点，运行在 `http://127.0.0.1:52880`。页面打开后所有请求都发往后端地址；后端未启动时页面仍可打开，操作会提示「后端服务未启动」。图片由后端进程托管在 `/generated/covers/*.png`，前端用后端地址拼出绝对 URL。
+
 最省心的启动方式：
 
 - macOS：双击 `启动薄荷工坊.command`
 - Windows：双击 `启动薄荷工坊.bat`
 
-脚本会使用固定地址 `http://127.0.0.1:52880`，缺少 `node_modules` 时会先执行 `npm install`，然后等待本地服务启动并自动打开浏览器。模型配置写入浏览器 `localStorage`，固定地址可以避免端口变化导致缓存读不到。
+脚本会先启动后端 52881，再启动前端 52880，缺少 `node_modules` 时会先执行 `npm install`，然后等待前端服务启动并自动打开浏览器。模型配置写入浏览器 `localStorage`，固定地址可以避免端口变化导致缓存读不到。
+
+后端地址默认 `http://127.0.0.1:52881`，如需指向其他实例，可在浏览器控制台设置 `localStorage.setItem("mint-atelier-v2:apiBase", "http://127.0.0.1:端口")` 后刷新页面。
 
 命令行启动同一个固定地址：
 
@@ -33,6 +37,12 @@ npm run launch:dev
 
 ```bash
 npm run deploy:local
+```
+
+只启动后端 API（前端另开一个终端用 `npm run dev:fixed`）：
+
+```bash
+npm run server
 ```
 
 临时启动开发服务器：
@@ -67,13 +77,31 @@ CLAUDE_CLI_PATH=/path/to/claude npm run launch:fixed
 
 右侧“文案生成”可以选择 Codex、Kimi、Claude，或填写符合 Mint Atelier print protocol 的自定义命令。自定义 CLI 需要支持 `--version`、`--prompt`、可选 `--model` 和 `--output-format stream-json`，最终 stdout 需包含 `{"role":"assistant","content":"<valid JSON>"}`。本地图片生成当前只显示具备 native imagegen 能力的 Codex CLI。
 
-小红书热门搜索通过本机 `xhs` CLI 触发，默认通过系统 PATH 查找 `xhs`，默认只使用 CLI 已保存登录态：
+小红书热门搜索通过本机 `xhs` CLI 触发。该 CLI 来自 PyPI 包 `xiaohongshu-cli`（仓库 `github.com/jackwener/xiaohongshu-cli`），需要 Python 3.10+，推荐用 `uv` 或 `pipx` 安装：
+
+```bash
+uv tool install xiaohongshu-cli     # 或 pipx install xiaohongshu-cli
+xhs status                          # 查看登录状态
+xhs login --qrcode                  # 用小红书 App 扫码登录（也可 xhs login 从已登录浏览器读取 Cookie）
+xhs --cookie-source none search "穿搭" --json   # 验证登录态与搜索输出
+```
+
+注意：npm 上的 `xhs-cli` 是另一个工具（创作者后台指标与发帖），没有 `search` 子命令，不要用它替代上面的包。
+
+服务端默认通过系统 PATH 查找 `xhs`，默认只使用 CLI 已保存的登录态：
 
 ```bash
 XHS_CLI_COMMAND=/path/to/xhs XHS_COOKIE_SOURCE=none npm run launch:fixed
 ```
 
-如果搜索提示未登录，请先在终端手动运行 `xhs login`，再回到页面点击搜索。前端不会读取、展示或保存 Cookie。
+如果搜索提示未登录，请先在终端运行 `xhs login` 或 `xhs login --qrcode`，再回到页面点击搜索。前端不会读取、展示或保存 Cookie。
+
+## 本地数据与导出
+
+- 工作区持久化：`data/workspace.json`。所有项目（人设、关键词、RAG 引用、选题、文案、整套配图方案与图片引用）都保存在这里，服务端用临时文件加改名的方式原子写入；文件损坏时会被重命名为 `workspace.json.broken-<时间戳>` 并重建空工作区，不会静默丢数据。接口见 `docs/API.md` 的 `/api/store`。
+- 图片持久化：`data/generated/`。封面图与整套配图的 PNG 落在这里，重启后仍然可用，由后端托管在 `/generated/covers/<fileName>`。
+- 导出产物：`output/<项目slug>/`，包含 `note.md`（标题、正文、话题清单、统一视觉规范、配图清单与每张图的 Prompt 说明）和 `images/`（从 `data/generated/` 拷贝的 PNG）。导出不存在的图片会被跳过并在响应 `skipped` 中列出。
+- `data/` 与 `output/` 均已加入 `.gitignore`。
 
 云端 API 路线在右侧模型配置中填写：模型名称、API Key、API Base URL。文案生成走 `POST /chat/completions`，图片生成走 `POST /images/generations`，服务端会把图片结果统一校验并发布为 `/generated/covers/*.png`。
 

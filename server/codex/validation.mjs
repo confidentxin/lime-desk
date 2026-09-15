@@ -1,5 +1,8 @@
-const VALID_KINDS = new Set(["topics", "drafts", "coverPrompts"]);
+const VALID_KINDS = new Set(["topics", "drafts", "coverPrompts", "imageSetPlan"]);
 const VALID_DECISION_KINDS = new Set(["rag", "topic", "draft", "coverPrompt"]);
+const IMAGE_SET_DEFAULT_INNER_COUNT = 4;
+const IMAGE_SET_MIN_INNER_COUNT = 2;
+const IMAGE_SET_MAX_INNER_COUNT = 6;
 
 export class CodexApiError extends Error {
   constructor(code, message, status = 400, details = undefined) {
@@ -9,6 +12,16 @@ export class CodexApiError extends Error {
     this.status = status;
     this.details = details;
   }
+}
+
+export function resolveImageSetInnerCount(payload) {
+  const raw = payload?.innerCount;
+  if (raw === undefined || raw === null || raw === "") {
+    return IMAGE_SET_DEFAULT_INNER_COUNT;
+  }
+
+  const value = Number(raw);
+  return Number.isInteger(value) ? value : IMAGE_SET_DEFAULT_INNER_COUNT;
 }
 
 export function validateRequest(payload) {
@@ -36,8 +49,28 @@ export function validateRequest(payload) {
     throw new CodexApiError("BAD_REQUEST", "请先选择一个选题。");
   }
 
-  if (payload.kind === "coverPrompts" && !payload.selectedDraft?.title) {
+  if (
+    (payload.kind === "coverPrompts" || payload.kind === "imageSetPlan") &&
+    !payload.selectedDraft?.title
+  ) {
     throw new CodexApiError("BAD_REQUEST", "请先选择一篇文案。");
+  }
+
+  if (payload.kind === "imageSetPlan") {
+    const raw = payload.innerCount;
+    if (raw !== undefined && raw !== null && raw !== "") {
+      const innerCount = Number(raw);
+      if (
+        !Number.isInteger(innerCount) ||
+        innerCount < IMAGE_SET_MIN_INNER_COUNT ||
+        innerCount > IMAGE_SET_MAX_INNER_COUNT
+      ) {
+        throw new CodexApiError(
+          "BAD_REQUEST",
+          `innerCount 必须是 ${IMAGE_SET_MIN_INNER_COUNT} 到 ${IMAGE_SET_MAX_INNER_COUNT} 的整数。`,
+        );
+      }
+    }
   }
 }
 
@@ -174,13 +207,7 @@ function normalizeDraft(item, index, topicTitle) {
   };
 }
 
-function normalizePrompt(item, index) {
-  const title = assertStringField(item, ["title", "标题", "封面标题", "promptTitle"], "title");
-  const prompt = assertStringField(
-    item,
-    ["prompt", "coverPrompt", "cover_prompt", "imagePrompt", "image_prompt", "封面Prompt", "封面提示词", "提示词"],
-    "prompt",
-  );
+function assertPromptBoundary(prompt, label = "封面") {
   const hasBoundary =
     /(真人|人物|人像|人类|模特|people|person|human|portrait)/i.test(prompt) &&
     /(脸|面部|面孔|五官|face|facial)/i.test(prompt) &&
@@ -188,13 +215,77 @@ function normalizePrompt(item, index) {
     /(动物|宠物|animal|pet)/i.test(prompt);
 
   if (!hasBoundary) {
-    throw new CodexApiError("CODEX_BAD_JSON", "模型返回的封面 Prompt 未明确排除真人、脸、手和动物。", 502);
+    throw new CodexApiError("CODEX_BAD_JSON", `模型返回的${label} Prompt 未明确排除真人、脸、手和动物。`, 502);
   }
+}
+
+function normalizePrompt(item, index) {
+  const title = assertStringField(item, ["title", "标题", "封面标题", "promptTitle"], "title");
+  const prompt = assertStringField(
+    item,
+    ["prompt", "coverPrompt", "cover_prompt", "imagePrompt", "image_prompt", "封面Prompt", "封面提示词", "提示词"],
+    "prompt",
+  );
+  assertPromptBoundary(prompt);
 
   return {
     id: `prompt-${index + 1}`,
     title,
     prompt,
+  };
+}
+
+function normalizeImageSetPlanItem(item, index) {
+  const title = assertStringField(item, ["title", "标题", "图片标题", "imageTitle"], "title");
+  const prompt = assertStringField(
+    item,
+    ["prompt", "imagePrompt", "image_prompt", "提示词", "图片提示词"],
+    "prompt",
+  );
+  assertPromptBoundary(prompt, "图片");
+
+  const rawRole = pickString(item, ["role", "角色"]);
+  const role = index === 0 ? "cover" : "inner";
+  if (rawRole && /^cover$/i.test(rawRole) && index !== 0) {
+    throw new CodexApiError("CODEX_BAD_JSON", "imageSetPlan 只有第一条可以是 cover。", 502);
+  }
+
+  return {
+    id: `img-${index + 1}`,
+    role,
+    title,
+    prompt,
+  };
+}
+
+export function normalizeImageSetPlan(parsed, payload) {
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items)) {
+    throw new CodexApiError("CODEX_BAD_JSON", "模型 JSON 必须包含 items 数组。", 502);
+  }
+
+  const styleGuide = pickString(parsed, ["styleGuide", "style_guide", "视觉规范", "统一视觉规范"]);
+  if (!styleGuide) {
+    throw new CodexApiError("CODEX_BAD_JSON", "模型返回缺少统一视觉规范 styleGuide。", 502);
+  }
+
+  const innerCount = resolveImageSetInnerCount(payload);
+  const expectedCount = 1 + innerCount;
+  if (parsed.items.length !== expectedCount) {
+    throw new CodexApiError(
+      "CODEX_BAD_JSON",
+      `整套配图数量不正确：需要 ${expectedCount} 条（1 封面 + ${innerCount} 内页），实际 ${parsed.items.length} 条。`,
+      502,
+    );
+  }
+
+  const rawFirstRole = pickString(parsed.items[0], ["role", "角色"]);
+  if (rawFirstRole && !/^cover$/i.test(rawFirstRole)) {
+    throw new CodexApiError("CODEX_BAD_JSON", "imageSetPlan 第一条必须是封面（role 为 cover）。", 502);
+  }
+
+  return {
+    styleGuide,
+    items: parsed.items.map(normalizeImageSetPlanItem),
   };
 }
 
@@ -265,6 +356,10 @@ export function normalizeDecisionResult(parsed, payload) {
 }
 
 export function normalizeCodexItems(kind, parsed, payload) {
+  if (kind === "imageSetPlan") {
+    return normalizeImageSetPlan(parsed, payload).items;
+  }
+
   if (!parsed || !Array.isArray(parsed.items)) {
     throw new CodexApiError("CODEX_BAD_JSON", "模型 JSON 必须包含 items 数组。", 502);
   }
@@ -287,4 +382,13 @@ export function normalizeCodexItems(kind, parsed, payload) {
   }
 
   return parsed.items.map(normalizePrompt);
+}
+
+export function normalizeGenerationOutput(kind, parsed, payload) {
+  if (kind === "imageSetPlan") {
+    const { styleGuide, items } = normalizeImageSetPlan(parsed, payload);
+    return { kind, styleGuide, items };
+  }
+
+  return { kind, items: normalizeCodexItems(kind, parsed, payload) };
 }
